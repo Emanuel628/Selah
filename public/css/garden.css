@@ -1,38 +1,7 @@
-/* --- SELAH DIGITAL GARDEN ARCHITECTURE --- */
+/* --- GARDEN PAGE STYLES --- */
 
-.tag-cloud-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 24px;
-}
-
-.garden-pill {
-    background: rgba(255, 255, 255, 0.06);
-    color: var(--text-secondary);
-    padding: 6px 14px;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 500;
-    transition: background 0.2s, color 0.2s;
-}
-
-.garden-pill.active {
-    background: var(--accent-green);
-    color: #081210;
-    font-weight: 600;
-}
-
-.dark-card {
-    background: rgba(255, 255, 255, 0.03) !important;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    color: var(--text-primary) !important;
-    margin-bottom: 16px;
-}
-
-.garden-preview-text {
-    margin: 8px 0 0 0;
-    font-size: 0.9rem;
-    line-height: 1.5;
-    color: #b2c4c0;
+body.light-mode {
+    --text-primary: #1a2e2a;
+    --text-secondary: #5a7a72;
+    --accent-green: #2d7a6e;
 }

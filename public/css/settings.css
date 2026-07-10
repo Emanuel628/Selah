@@ -90,6 +90,11 @@ a:active {
     border-radius: 16px;
 }
 
+body.light-mode .settings-list-group {
+    background: rgba(0, 0, 0, 0.02);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
 /* Individual settings rows */
 .settings-item-row {
     width: 100%;
@@ -112,6 +117,11 @@ a:active {
     text-align: left;
 }
 
+body.light-mode .settings-item-row {
+    color: #1a2e2a;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
 .settings-item-row:last-child {
     border-bottom: 0;
 }
@@ -125,6 +135,11 @@ button.settings-item-row {
 a.settings-item-row:active,
 button.settings-item-row:active {
     background: rgba(255, 255, 255, 0.045);
+}
+
+body.light-mode a.settings-item-row:active,
+body.light-mode button.settings-item-row:active {
+    background: rgba(0, 0, 0, 0.04);
 }
 
 /* Reset clickable button rows */
@@ -145,6 +160,10 @@ button.settings-item-row:active {
 
     font-size: 0.94rem;
     font-weight: 600;
+}
+
+body.light-mode .item-meta-left {
+    color: #1a2e2a;
 }
 
 .item-meta-left i {
@@ -185,6 +204,10 @@ button.settings-item-row:active {
     font-size: 0.68rem;
 }
 
+body.light-mode .row-chevron {
+    color: rgba(0, 0, 0, 0.3);
+}
+
 /* Toggle switch */
 .form-switch {
     position: relative;
@@ -222,6 +245,11 @@ button.settings-item-row:active {
         border-color 0.2s ease;
 }
 
+body.light-mode .slider-knob {
+    background: rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
 .slider-knob::before {
     content: "";
 
@@ -241,6 +269,11 @@ button.settings-item-row:active {
         background 0.2s ease;
 }
 
+body.light-mode .slider-knob::before {
+    background: #ffffff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
 .form-switch input:checked + .slider-knob {
     background: var(--accent-green);
     border-color: var(--accent-green);
@@ -251,9 +284,17 @@ button.settings-item-row:active {
     transform: translateX(20px);
 }
 
+body.light-mode .form-switch input:checked + .slider-knob::before {
+    background: #ffffff;
+}
+
 .form-switch input:focus-visible + .slider-knob {
     outline: 2px solid rgba(118, 199, 165, 0.55);
     outline-offset: 3px;
+}
+
+body.light-mode .form-switch input:focus-visible + .slider-knob {
+    outline: 2px solid rgba(45, 122, 110, 0.4);
 }
 
 /* Sign-out area */
@@ -289,10 +330,21 @@ button.settings-item-row:active {
         transform 0.15s ease;
 }
 
+body.light-mode .sign-out-button {
+    color: #d84f4f !important;
+    background: rgba(216, 79, 79, 0.08);
+    border: 1px solid rgba(216, 79, 79, 0.15);
+}
+
 .sign-out-button:active {
     background: rgba(234, 133, 133, 0.11);
     border-color: rgba(234, 133, 133, 0.25);
     transform: scale(0.985);
+}
+
+body.light-mode .sign-out-button:active {
+    background: rgba(216, 79, 79, 0.15);
+    border-color: rgba(216, 79, 79, 0.25);
 }
 
 /*

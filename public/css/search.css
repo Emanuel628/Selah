@@ -1,47 +1,7 @@
-/* --- SELAH GLOBAL COMMAND SEARCH HUB --- */
+/* --- SEARCH PAGE STYLES --- */
 
-.search-bar-wrapper {
-    position: relative;
-    width: 100%;
-}
-
-.search-field-icon {
-    position: absolute;
-    left: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--accent-green);
-}
-
-.search-input-field {
-    width: 100%;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 14px 14px 14px 44px;
-    border-radius: 12px;
-    color: #fff;
-    font-family: inherit;
-    font-size: 0.95rem;
-    outline: none;
-    box-sizing: border-box;
-    transition: border-color 0.2s;
-}
-
-.search-input-field:focus {
-    border-color: var(--accent-green);
-}
-
-.recent-search-items {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    margin-top: 16px;
-}
-
-.recent-search-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    color: var(--text-secondary);
-    font-size: 0.9rem;
+body.light-mode {
+    --text-primary: #1a2e2a;
+    --text-secondary: #5a7a72;
+    --accent-green: #2d7a6e;
 }

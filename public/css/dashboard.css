@@ -9,6 +9,10 @@ body {
     overflow: hidden;
 }
 
+body.light-mode {
+    background: linear-gradient(135deg, #f8faf9 0%, #f0f5f3 100%);
+}
+
 /* Forces app layout dimensions to lock exactly to native hardware viewports */
 .mobile-viewport {
     position: relative;
@@ -33,6 +37,11 @@ body {
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     z-index: 10;
+}
+
+body.light-mode .mobile-header {
+    background: rgba(245, 248, 247, 0.9);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .header-left {
@@ -62,6 +71,10 @@ body {
     border-radius: 20px;
 }
 
+body.light-mode .current-location {
+    background: rgba(0, 0, 0, 0.06);
+}
+
 .avatar-badge {
     width: 28px;
     height: 28px;
@@ -73,6 +86,10 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+body.light-mode .avatar-badge {
+    color: #ffffff;
 }
 
 /* --- BASE LAYER: IMMERSIVE TEXT CONTEXT --- */
@@ -99,6 +116,10 @@ body {
     color: #e2e8e6;
 }
 
+body.light-mode .scripture-body {
+    color: #2d4238;
+}
+
 .verse {
     margin-bottom: 24px;
     position: relative;
@@ -120,6 +141,10 @@ body {
     border-radius: 4px;
 }
 
+body.light-mode .text-glow-gold {
+    background: rgba(184, 134, 11, 0.12);
+}
+
 /* Interactive High-End Selection Highlight */
 .verse.highlighted {
     background: rgba(92, 169, 135, 0.06);
@@ -130,6 +155,10 @@ body {
     border-left: 3px solid var(--accent-green);
 }
 
+body.light-mode .verse.highlighted {
+    background: rgba(45, 122, 110, 0.06);
+}
+
 .interactive-word {
     position: relative;
     font-weight: 400;
@@ -137,6 +166,10 @@ body {
     border-bottom: 2px solid var(--accent-green);
     cursor: pointer;
     padding-right: 12px;
+}
+
+body.light-mode .interactive-word {
+    color: #2d4238;
 }
 
 .pulse-dot {
@@ -169,6 +202,12 @@ body {
     box-sizing: border-box;
 }
 
+body.light-mode .bottom-sheet {
+    background: rgba(245, 248, 247, 0.92);
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.08);
+}
+
 /* Controls the static display of the drawer peeking from the bottom */
 .bottom-sheet.peek {
     transform: translateY(calc(100% - 240px)); /* Shows exactly the navigation headers and top note layer */
@@ -190,11 +229,19 @@ body {
     border-radius: 2px;
 }
 
+body.light-mode .drag-handle {
+    background: rgba(0, 0, 0, 0.12);
+}
+
 .sheet-tabs {
     display: flex;
     padding: 0 16px;
     gap: 8px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+body.light-mode .sheet-tabs {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .sheet-tab {
@@ -231,6 +278,11 @@ body {
     box-shadow: 0 8px 24px rgba(0,0,0,0.15);
 }
 
+body.light-mode .garden-note-card {
+    background: #ffffff;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
 .card-meta {
     display: flex;
     justify-content: space-between;
@@ -244,11 +296,20 @@ body {
     color: #4a6b5d;
 }
 
+body.light-mode .timestamp {
+    color: #5a8a72;
+}
+
 .card-tag {
     background: #eaf2ee;
     color: #2d5a47;
     padding: 2px 8px;
     border-radius: 4px;
+}
+
+body.light-mode .card-tag {
+    background: #e8f0ed;
+    color: #2d5a47;
 }
 
 .editable-note {
@@ -276,6 +337,11 @@ body {
     box-sizing: border-box;
 }
 
+body.light-mode .mobile-tab-bar {
+    background: rgba(250, 251, 250, 0.95);
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
 .tab-item {
     background: none;
     border: none;
@@ -301,6 +367,10 @@ body {
     transition: transform 0.2s ease, color 0.2s ease, filter 0.2s ease;
 }
 
+body.light-mode .tab-icon-svg {
+    color: #7a9b94;
+}
+
 .tab-item span {
     font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 0.7rem;
@@ -309,11 +379,19 @@ body {
     transition: color 0.2s ease;
 }
 
+body.light-mode .tab-item span {
+    color: #7a9b94;
+}
+
 /* --- ACTIVE STATE THEMING --- */
 .tab-item.active .tab-icon-svg {
     color: var(--accent-green) !important;
     filter: drop-shadow(0 0 6px rgba(92, 169, 135, 0.4));
     transform: translateY(-1px);
+}
+
+body.light-mode .tab-item.active .tab-icon-svg {
+    filter: drop-shadow(0 0 6px rgba(45, 122, 110, 0.3));
 }
 
 .tab-item.active span {
@@ -344,22 +422,42 @@ body {
     font-size: 0.85rem;
     font-weight: 500;
 }
+
+body.light-mode .garden-pill {
+    background: rgba(0, 0, 0, 0.06);
+}
+
 .garden-pill.active {
     background: var(--accent-green);
     color: #081210;
     font-weight: 600;
 }
+
+body.light-mode .garden-pill.active {
+    color: #ffffff;
+}
+
 .dark-card {
     background: rgba(255, 255, 255, 0.03) !important;
     border: 1px solid rgba(255, 255, 255, 0.05);
     color: var(--text-primary) !important;
     margin-bottom: 16px;
 }
+
+body.light-mode .dark-card {
+    background: rgba(0, 0, 0, 0.02) !important;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
 .garden-preview-text {
     margin: 8px 0 0 0;
     font-size: 0.9rem;
     line-height: 1.5;
     color: #b2c4c0;
+}
+
+body.light-mode .garden-preview-text {
+    color: #6a8a82;
 }
 
 /* Command Search Mechanics */
@@ -386,6 +484,13 @@ body {
     outline: none;
     box-sizing: border-box;
 }
+
+body.light-mode .search-input-field {
+    background: rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    color: #1a2e2a;
+}
+
 .recent-search-items {
     display: flex;
     flex-direction: column;
@@ -409,6 +514,12 @@ body {
     border-radius: 16px;
     overflow: hidden;
 }
+
+body.light-mode .settings-list-group {
+    background: rgba(0, 0, 0, 0.02);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
 .settings-item-row {
     display: flex;
     justify-content: space-between;
@@ -416,6 +527,11 @@ body {
     padding: 16px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
+
+body.light-mode .settings-item-row {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
 .settings-item-row:last-child {
     border-bottom: none;
 }
@@ -445,4 +561,9 @@ body {
     border-radius: 6px;
     font-size: 0.75rem;
     font-weight: 700;
+}
+
+body.light-mode .item-status-pill.operational {
+    background: rgba(45, 122, 110, 0.12);
+    color: #2d7a6e;
 }

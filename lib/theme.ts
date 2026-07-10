@@ -1,9 +1,8 @@
 export const colors = {
+  // Dark Mode
   desktopBg: '#07151a',
-  lightDesktopBg: '#dfe6e1',
   bg: '#091a1d',
   bg2: '#0d1824',
-  lightBg: '#f4efe3',
   navigation: '#07141b',
   surface: '#122429',
   surfaceRaised: '#172b30',
@@ -17,4 +16,22 @@ export const colors = {
   paper: '#fcfdfc',
   ink: '#1c2d27',
   line: 'rgba(255,255,255,0.08)',
+
+  // Light Mode
+  lightDesktopBg: '#f8faf9',
+  lightBg: '#f0f5f3',
+  lightBg2: '#eff4f2',
+  lightNavigation: '#fafbfa',
+  lightSurface: '#f5f8f7',
+  lightSurfaceRaised: '#eff4f2',
+  lightPanel: '#f5f8f7',
+  lightPanel2: '#eff4f2',
+  lightText: '#1a2e2a',
+  lightMuted: '#5a7a72',
+  lightGold: '#b8860b',
+  lightGreen: '#2d7a6e',
+  lightDanger: '#d84f4f',
+  lightPaper: '#ffffff',
+  lightInk: '#1c2d27',
+  lightLine: 'rgba(0,0,0,0.06)',
 };

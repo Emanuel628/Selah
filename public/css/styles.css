@@ -1,5 +1,6 @@
 /* --- DESIGN SYSTEM VARIABLES --- */
 :root {
+    /* Dark Mode (Default) */
     --bg-gradient: linear-gradient(135deg, #091a18 0%, #0d1527 100%);
     --bg-header: rgba(13, 27, 25, 0.85);
     --bg-pane-left: rgba(25, 38, 35, 0.4);
@@ -19,6 +20,23 @@
     /* Font Stacks */
     --font-ui: 'Plus Jakarta Sans', 'Inter', sans-serif;
     --font-serif: 'Merriweather', Georgia, serif;
+}
+
+/* Light Mode Toggle */
+body.light-mode {
+    --bg-gradient: linear-gradient(135deg, #f8faf9 0%, #f0f5f3 100%);
+    --bg-header: rgba(245, 248, 247, 0.95);
+    --bg-pane-left: rgba(240, 245, 243, 0.6);
+    
+    --text-primary: #1a2e2a;
+    --text-secondary: #5a7a72;
+    --accent-gold: #b8860b;
+    --accent-green: #2d7a6e;
+    
+    --note-bg: #ffffff;
+    --note-text: #1c2d27;
+    --note-tag-bg: #e8f0ed;
+    --note-tag-text: #2d5a47;
 }
 
 /* --- RESET & BASE STYLES --- */
@@ -60,6 +78,10 @@ body {
     z-index: 10;
 }
 
+body.light-mode .app-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
 .logo {
     display: flex;
     align-items: center;
@@ -87,6 +109,10 @@ body {
     border-radius: 4px;
     margin-left: 0.5rem;
     color: var(--text-secondary);
+}
+
+body.light-mode .translation-tag {
+    background: rgba(0, 0, 0, 0.06);
 }
 
 .header-right {
@@ -142,11 +168,19 @@ body {
     flex-direction: column;
 }
 
+body.light-mode .left-pane {
+    border-right: 1px solid rgba(0, 0, 0, 0.06);
+}
+
 .pane-tabs {
     display: flex;
     padding: 1rem 1.5rem 0 1.5rem;
     gap: 0.5rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+body.light-mode .pane-tabs {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .tab-btn {
@@ -185,6 +219,10 @@ body {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
 
+body.light-mode .note-card {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
 .note-card-header {
     display: flex;
     justify-content: space-between;
@@ -206,6 +244,10 @@ body {
     font-size: 1rem;
 }
 
+body.light-mode .more-btn {
+    color: #8a9b94;
+}
+
 .note-card-body {
     font-family: var(--font-ui);
     font-size: 0.95rem;
@@ -225,6 +267,10 @@ body {
     gap: 0.4rem;
 }
 
+body.light-mode .note-meta {
+    color: #5a8a72;
+}
+
 .tag {
     background: var(--note-tag-bg);
     color: var(--note-tag-text);
@@ -239,6 +285,10 @@ body {
     padding-left: 0.75rem;
     font-style: italic;
     color: #3d5249;
+}
+
+body.light-mode .highlight-line {
+    color: #5a8a72;
 }
 
 /* RIGHT PANE: BIBLE READER */
@@ -278,6 +328,10 @@ body {
     color: #e2e8e6;
 }
 
+body.light-mode .scripture-text {
+    color: #2d4238;
+}
+
 .verse {
     margin-bottom: 1.75rem;
     position: relative;
@@ -302,6 +356,10 @@ body {
     border-radius: 2px;
 }
 
+body.light-mode .text-highlight-gold {
+    background: rgba(184, 134, 11, 0.12);
+}
+
 .interactive-word {
     position: relative;
     cursor: pointer;
@@ -309,6 +367,10 @@ body {
     padding: 0.1rem 0.3rem;
     border-radius: 4px;
     font-weight: 400;
+}
+
+body.light-mode .interactive-word {
+    background: rgba(45, 122, 110, 0.12);
 }
 
 /* Floating Action Micro-Tooltip */
@@ -331,6 +393,12 @@ body {
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
+body.light-mode .tooltip-badge {
+    background: #e8f2ef;
+    border: 1px solid rgba(45, 122, 110, 0.2);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
 /* --- BOTTOM TABLET APP NAV BAR --- */
 .app-footer {
     display: flex;
@@ -339,6 +407,11 @@ body {
     padding: 0.75rem 1rem;
     background: rgba(7, 15, 27, 0.95);
     border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+body.light-mode .app-footer {
+    background: rgba(250, 251, 250, 0.98);
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .footer-nav-btn {
