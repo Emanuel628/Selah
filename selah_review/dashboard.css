@@ -1,0 +1,448 @@
+/* --- SELAH PREMIUM MOBILE DASHBOARD ENGINE --- */
+
+body {
+    margin: 0;
+    padding: 0;
+    background: #091a18; /* Fail-safe color before variables compile */
+    background: var(--bg-gradient);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    overflow: hidden;
+}
+
+/* Forces app layout dimensions to lock exactly to native hardware viewports */
+.mobile-viewport {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+/* --- ERGONOMIC TOP BAR --- */
+.mobile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    padding-top: calc(12px + env(safe-area-inset-top)); /* Accounts for phone camera notches */
+    background: rgba(13, 27, 25, 0.5);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    z-index: 10;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.logo-icon {
+    color: var(--accent-green);
+    font-size: 1.2rem;
+}
+
+.app-title {
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: -0.3px;
+    color: var(--text-primary);
+}
+
+.current-location {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.06);
+    padding: 4px 12px;
+    border-radius: 20px;
+}
+
+.avatar-badge {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--accent-gold);
+    color: #0d1527;
+    font-weight: 700;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* --- BASE LAYER: IMMERSIVE TEXT CONTEXT --- */
+.scripture-canvas {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 24px 260px 24px; /* Massive bottom padding so text clears the bottom sheet peek */
+    -webkit-overflow-scrolling: touch;
+}
+
+.translation-indicator {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+    font-weight: 600;
+}
+
+.scripture-body {
+    font-family: 'Merriweather', Georgia, serif;
+    font-size: 1.15rem;
+    line-height: 1.95;
+    color: #e2e8e6;
+}
+
+.verse {
+    margin-bottom: 24px;
+    position: relative;
+    transition: background 0.3s;
+}
+
+.v-num {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--accent-gold);
+    margin-right: 8px;
+}
+
+.text-glow-gold {
+    background: rgba(229, 193, 88, 0.12);
+    border-bottom: 1px dashed var(--accent-gold);
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+
+/* Interactive High-End Selection Highlight */
+.verse.highlighted {
+    background: rgba(92, 169, 135, 0.06);
+    padding: 8px 12px;
+    margin-left: -12px;
+    margin-right: -12px;
+    border-radius: 8px;
+    border-left: 3px solid var(--accent-green);
+}
+
+.interactive-word {
+    position: relative;
+    font-weight: 400;
+    color: #fff;
+    border-bottom: 2px solid var(--accent-green);
+    cursor: pointer;
+    padding-right: 12px;
+}
+
+.pulse-dot {
+    position: absolute;
+    right: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 5px;
+    height: 5px;
+    background: var(--accent-green);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--accent-green);
+}
+
+/* --- MIDDLE LAYER: ADAPTIVE BOTTOM SHEET --- */
+.bottom-sheet {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100vw;
+    background: rgba(18, 32, 29, 0.88);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px 24px 0 0;
+    z-index: 20;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+    padding-bottom: calc(65px + env(safe-area-inset-bottom)); /* Clears the fixed footer tabs */
+    box-sizing: border-box;
+}
+
+/* Controls the static display of the drawer peeking from the bottom */
+.bottom-sheet.peek {
+    transform: translateY(calc(100% - 240px)); /* Shows exactly the navigation headers and top note layer */
+}
+
+.drag-handle-bar {
+    width: 100%;
+    height: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: grab;
+}
+
+.drag-handle {
+    width: 36px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+}
+
+.sheet-tabs {
+    display: flex;
+    padding: 0 16px;
+    gap: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sheet-tab {
+    background: none;
+    border: none;
+    padding: 12px 16px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border-bottom: 2px solid transparent;
+}
+
+.sheet-tab.active {
+    color: var(--accent-green);
+    border-bottom-color: var(--accent-green);
+}
+
+.sheet-content {
+    padding: 20px;
+    overflow-y: auto;
+    max-height: 300px;
+}
+
+/* Premium Digital Garden Card Layout */
+.garden-note-card {
+    background: #fcfdfc;
+    color: #1c2d27;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+.card-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.timestamp {
+    color: #4a6b5d;
+}
+
+.card-tag {
+    background: #eaf2ee;
+    color: #2d5a47;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.editable-note {
+    font-size: 0.925rem;
+    line-height: 1.55;
+    outline: none;
+}
+
+/* --- PERSISTENT NATIVE TAB BAR --- */
+.mobile-tab-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100vw;
+    height: calc(64px + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    background: rgba(7, 15, 27, 0.92);
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 30; /* Highest priority layer index */
+    box-sizing: border-box;
+}
+
+.tab-item {
+    background: none;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    cursor: pointer;
+    width: 60px;
+    height: 100%;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Strict Sizing Constraints to Prevent SVG Bloat */
+.tab-icon-svg {
+    width: 22px !important;
+    height: 22px !important;
+    max-width: 22px;
+    max-height: 22px;
+    color: #627773; /* Muted slate teal for unselected state */
+    transition: transform 0.2s ease, color 0.2s ease, filter 0.2s ease;
+}
+
+.tab-item span {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #627773;
+    transition: color 0.2s ease;
+}
+
+/* --- ACTIVE STATE THEMING --- */
+.tab-item.active .tab-icon-svg {
+    color: var(--accent-green) !important;
+    filter: drop-shadow(0 0 6px rgba(92, 169, 135, 0.4));
+    transform: translateY(-1px);
+}
+
+.tab-item.active span {
+    color: var(--accent-green);
+}
+
+/* Tactile Native Touch Feedback */
+.tab-item:active .tab-icon-svg {
+    transform: scale(0.92);
+}
+
+
+
+/* --- SUB-VIEW INTERNAL INTERFACES --- */
+
+/* Garden Structural Components */
+.tag-cloud-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+.garden-pill {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-secondary);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+.garden-pill.active {
+    background: var(--accent-green);
+    color: #081210;
+    font-weight: 600;
+}
+.dark-card {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    color: var(--text-primary) !important;
+    margin-bottom: 16px;
+}
+.garden-preview-text {
+    margin: 8px 0 0 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: #b2c4c0;
+}
+
+/* Command Search Mechanics */
+.search-bar-wrapper {
+    position: relative;
+    width: 100%;
+}
+.search-field-icon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--accent-green);
+}
+.search-input-field {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 14px 14px 14px 44px;
+    border-radius: 12px;
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.95rem;
+    outline: none;
+    box-sizing: border-box;
+}
+.recent-search-items {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 16px;
+}
+.recent-search-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+/* System Settings Mechanics */
+.settings-list-group {
+    display: flex;
+    flex-direction: column;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    overflow: hidden;
+}
+.settings-item-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.settings-item-row:last-child {
+    border-bottom: none;
+}
+.item-meta-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+.item-meta-left i {
+    color: var(--accent-green);
+    width: 16px;
+}
+.item-value-right {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+.item-value-right i {
+    font-size: 0.75rem;
+    margin-left: 4px;
+}
+.item-status-pill.operational {
+    background: rgba(92, 169, 135, 0.15);
+    color: var(--accent-green);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}

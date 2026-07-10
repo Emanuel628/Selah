@@ -1,0 +1,104 @@
+/* --- LAYOUT RESET --- */
+html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #081210; }
+
+.mobile-viewport {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100%;
+}
+
+/* --- MAIN CONTENT SCROLLING --- */
+.scripture-canvas {
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: 20px;
+}
+
+/* --- LINK RESET (KILLS BLUE/PURPLE/UNDERLINES) --- */
+a, a:link, a:visited, a:hover, a:active {
+    text-decoration: none !important;
+    color: inherit;
+}
+
+/* --- FOOTER NAVIGATION --- */
+.mobile-tab-bar {
+    height: 70px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background: #081210;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+}
+
+.tab-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.7rem;
+    /* FORCE INACTIVE COLOR */
+    color: #b2c4c0 !important;
+    text-decoration: none !important;
+}
+
+.tab-item.active {
+    /* FORCE ACTIVE COLOR */
+    color: var(--accent-green) !important;
+}
+
+.tab-item i {
+    font-size: 1.2rem;
+    transition: transform 0.2s ease;
+}
+
+.tab-item.active i {
+    transform: scale(1.2);
+}
+
+/* --- SETTINGS LISTS --- */
+.settings-section-title {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-secondary);
+    margin: 32px 16px 12px 16px;
+    font-weight: 800;
+}
+
+.settings-list-group {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    margin: 0 16px;
+    overflow: hidden;
+}
+
+.settings-item-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    color: #fff;
+}
+
+.settings-item-row:last-child { border-bottom: none; }
+
+.item-meta-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.item-meta-left i {
+    width: 20px;
+    text-align: center;
+    color: var(--accent-green);
+}
+
+.item-value-right {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}

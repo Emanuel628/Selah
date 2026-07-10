@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Selah — Settings</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/settings.css">
+</head>
+<body>
+    <div class="mobile-viewport">
+        <header class="mobile-header">
+            <div class="header-left"><i class="fa-solid fa-seedling logo-icon"></i> <span class="app-title">Selah</span></div>
+            <div class="header-center"><span class="current-location">Settings</span></div>
+            <div class="header-right"><div class="avatar-badge">J</div></div>
+        </header>
+
+        <main class="scripture-canvas">
+            <div class="settings-section-title">Account</div>
+            <div class="settings-list-group">
+                <a href="subscription.html" class="settings-item-row">
+                    <div class="item-meta-left"><i class="fa-solid fa-star" style="color: var(--accent-gold);"></i> Subscription</div>
+                    <span class="item-value-right" style="color: var(--accent-green);">Pro Active <i class="fa-solid fa-chevron-right"></i></span>
+                </a>
+            </div>
+
+            <div class="settings-section-title">Appearance</div>
+            <div class="settings-list-group">
+                <div class="settings-item-row">
+                    <div class="item-meta-left"><i class="fa-solid fa-moon"></i> Dark Mode</div>
+                    <label class="form-switch"><input type="checkbox" checked><span class="slider-knob"></span></label>
+                </div>
+                <div class="settings-item-row">
+                    <div class="item-meta-left"><i class="fa-solid fa-palette"></i> Reading Theme</div>
+                    <span class="item-value-right">Sepia <i class="fa-solid fa-chevron-right"></i></span>
+                </div>
+            </div>
+
+            <div class="settings-section-title">Reader Settings</div>
+            <div class="settings-list-group">
+                <div class="settings-item-row">
+                    <div class="item-meta-left"><i class="fa-solid fa-quote-left"></i> Red Lettering</div>
+                    <label class="form-switch"><input type="checkbox" checked><span class="slider-knob"></span></label>
+                </div>
+                <div class="settings-item-row">
+                    <div class="item-meta-left"><i class="fa-solid fa-list-ol"></i> Show Verse Numbers</div>
+                    <label class="form-switch"><input type="checkbox" checked><span class="slider-knob"></span></label>
+                </div>
+            </div>
+
+            <div class="settings-section-title">Privacy & Security</div>
+            <div class="settings-list-group">
+                <div class="settings-item-row">
+                    <div class="item-meta-left"><i class="fa-solid fa-fingerprint"></i> Biometric Lock</div>
+                    <label class="form-switch"><input type="checkbox"><span class="slider-knob"></span></label>
+                </div>
+                <div class="settings-item-row">
+                    <div class="item-meta-left"><i class="fa-solid fa-bell"></i> Daily Reminders</div>
+                    <span class="item-value-right">8:00 AM <i class="fa-solid fa-chevron-right"></i></span>
+                </div>
+            </div>
+
+            <div style="margin-top: 24px; padding: 0 16px;">
+                <button style="width: 100%; padding: 14px; background: rgba(234, 133, 133, 0.05); border: 1px solid rgba(234, 133, 133, 0.1); color: #ea8585; border-radius: 12px; font-weight: 600; cursor: pointer;">Sign Out</button>
+            </div>
+        </main>
+
+        <nav class="mobile-tab-bar">
+            <a href="../../index.html" class="tab-item"><i class="fa-solid fa-book-open"></i><span>Read</span></a>
+            <a href="garden.html" class="tab-item"><i class="fa-solid fa-seedling"></i><span>Garden</span></a>
+            <a href="search.html" class="tab-item"><i class="fa-solid fa-magnifying-glass"></i><span>Search</span></a>
+            <a href="settings.html" class="tab-item active"><i class="fa-solid fa-gear"></i><span>Settings</span></a>
+        </nav>
+    </div>
+</body>
+</html>
