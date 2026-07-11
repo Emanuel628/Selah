@@ -239,6 +239,28 @@ export default function Settings() {
             last: true,
           })}
         </View>
+        <Text style={s.label}>STUDY TOOLS</Text>
+        <View style={s.group}>
+          {row({
+            icon: "sparkles-outline",
+            name: "Garden Insights",
+            detail: "Synthesis",
+            onPress: () => router.push("/garden-insights" as any),
+          })}
+          {row({
+            icon: "git-network-outline",
+            name: "Knowledge Graph",
+            detail: "Connections",
+            onPress: () => router.push("/knowledge-graph" as any),
+          })}
+          {row({
+            icon: "text-outline",
+            name: "Word Study",
+            detail: "Lexicon",
+            onPress: () => router.push("/word-study" as any),
+            last: true,
+          })}
+        </View>
         <Text style={s.label}>PRIVACY & SECURITY</Text>
         <View style={s.group}>
           {row({

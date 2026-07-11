@@ -261,6 +261,18 @@ test("Search finds Bible passages by book, chapter, and page", async ({ page }) 
   ).toBeVisible();
 });
 
+test("Search finds verse text across Scripture", async ({ page }) => {
+  await page.goto("/search");
+  await page.getByPlaceholder("Find a book or passage").fill("created heavens");
+  await expect(page.getByText("Genesis 1:1", { exact: true })).toBeVisible({
+    timeout: 20000,
+  });
+  await page.getByText("Genesis 1:1", { exact: true }).click();
+  await expect(
+    page.getByText("Genesis 1", { exact: true }).first(),
+  ).toBeVisible();
+});
+
 test("Daily Reminder time is editable, saveable, and reflected in Settings", async ({
   page,
 }) => {
@@ -305,6 +317,39 @@ test("Reader full screen hides navigation and exits on a double tap", async ({
   await expect(page.getByLabel("Enter full screen reading")).toBeVisible();
 });
 
+test("Reader shows cross references for the current page", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByText("RELATED PASSAGES")).toBeVisible({
+    timeout: 12000,
+  });
+  await expect(page.getByText(/Related to verse/).first()).toBeVisible();
+});
+
+test("Garden Insights summarizes reflection patterns", async ({ page }) => {
+  await page.goto("/garden");
+  await page.getByLabel("Open Garden Insights").click();
+  await expect(page.getByText("SYNTHESIS", { exact: true })).toBeVisible();
+  await expect(page.getByText("Recurring Themes")).toBeVisible();
+  await expect(page.getByText("Thought Group Balance")).toBeVisible();
+});
+
+test("Knowledge Graph shows Garden connections", async ({ page }) => {
+  await page.goto("/garden");
+  await page.getByLabel("Open Knowledge Graph").click();
+  await expect(page.getByText("Reflection connections")).toBeVisible();
+  await expect(page.getByText("Thought Group", { exact: true }).first()).toBeVisible();
+});
+
+test("Word Study searches Scripture and Garden terms", async ({ page }) => {
+  await page.goto("/settings");
+  await page.getByText("Word Study").click();
+  await page.getByPlaceholder("Search a word or phrase").fill("light");
+  await page.getByLabel("Run word study search").click();
+  await expect(page.getByText("Genesis 1:3", { exact: true })).toBeVisible({
+    timeout: 20000,
+  });
+});
+
 test("Reader supports verse highlighting", async ({ page }) => {
   await page.goto("/");
   const verse = page
@@ -326,6 +371,8 @@ test("Help explains the complete app flow", async ({ page }) => {
     page.getByText("Face ID and biometrics", { exact: true }),
   ).toBeVisible();
   await expect(page.getByText("Highlights", { exact: true })).toBeVisible();
+  await expect(page.getByText("Search and cross-references", { exact: true })).toBeVisible();
+  await expect(page.getByText("Word Study", { exact: true }).last()).toBeVisible();
   await expect(page.getByText("Free and Pro", { exact: true })).toBeVisible();
 });
 

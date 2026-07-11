@@ -27,6 +27,8 @@ export default function Plan() {
           trial
             ? {
                 subscription_tier: "pro",
+                subscription_status: "trialing",
+                subscription_cancel_at_period_end: false,
                 trial_started_at: now.toISOString(),
                 trial_ends_at: end.toISOString(),
                 guide_completed: true,
@@ -34,6 +36,8 @@ export default function Plan() {
               }
             : {
                 subscription_tier: "free",
+                subscription_status: "free",
+                subscription_cancel_at_period_end: false,
                 trial_started_at: null,
                 trial_ends_at: null,
                 guide_completed: true,
@@ -54,9 +58,10 @@ export default function Plan() {
           </View>
           <Text style={s.trialTitle}>Experience Selah Pro</Text>
           {[
-            "AI-guided reflection tools when released",
-            "Advanced synthesis and priority search",
-            "Multi-device Pro features as they launch",
+            "Garden Insights synthesis from your reflections",
+            "Knowledge Graph connections across notes",
+            "Priority Scripture search and cross-reference study",
+            "AI-guided reflection tools when billing launches",
           ].map((item) => (
             <View key={item} style={s.feature}>
               <Ionicons name="checkmark-circle" size={18} color={c.gold} />

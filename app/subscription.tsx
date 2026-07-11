@@ -11,7 +11,9 @@ const features = [
   "Scripture reading and page navigation",
   "Garden reflections, search, filters, and tags",
   "Bookmarks and study reminders",
-  "AI-guided reflection tools when released",
+  "Garden Insights synthesis and guided reflection",
+  "Knowledge Graph connections across notes",
+  "Priority Scripture search and cross-reference study",
 ];
 
 export default function Subscription() {
@@ -54,12 +56,12 @@ export default function Subscription() {
             <View key={feature} style={s.feature}>
               <Ionicons
                 name={
-                  index === 3 && tier === "free"
+                  index >= 3 && tier === "free"
                     ? "lock-closed-outline"
                     : "checkmark-circle"
                 }
                 size={19}
-                color={index === 3 ? c.gold : c.green}
+                color={index >= 3 ? c.gold : c.green}
               />
               <Text style={s.featureText}>{feature}</Text>
             </View>

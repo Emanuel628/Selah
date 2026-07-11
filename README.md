@@ -23,8 +23,8 @@ features can use those relationships to surface connections across passages.
 
 ## Feature Ecosystem
 - Reading: Multi-Translation Engine, Themes, Font Scaling, Red Letter
-- Garden: Insight Entries, Knowledge Graph
-- Pro: Multi-device Sync, Lexicon, Priority Search
+- Garden: Insight Entries, Garden Insights, Knowledge Graph
+- Pro: Word Study, Garden Synthesis, Priority Search
 - Settings: Face ID Login
 - Engagement: Study Reminders
 
@@ -48,13 +48,18 @@ switch appearances from Settings → Dark Mode.
 - Supabase email/password authentication, verification, and password recovery
 - Cloud-backed Garden notes, reader preferences, bookmarks, and reminders
 - Owner-only row-level security policies and migration-managed database schema
+- Full Scripture search with local translation indexing
+- Cross-reference panel for the current reading page
+- Garden Insights synthesis from reflections, tags, thought groups, and books
+- Word Study across Scripture and Garden notes
+- Knowledge Graph clusters for tags, books, thought groups, and connected notes
 
 ## Remaining
-- Full-Scripture search
 - Production subscription billing and entitlements
-- Cross-reference engine
 - Email provider keys for account/subscription confirmation emails
-- Pro synthesis features that turn Garden reflections into guided insight
+- Real AI synthesis keys and server-side guided reflection generation
+- Production-grade Pro enforcement around paid-only features
+- App Store subscription products and entitlement webhooks
 
 ## Technical Architecture
 - Contextual Anchoring

@@ -16,7 +16,13 @@ import { Screen } from "@/components/Screen";
 import { AppColors } from "@/lib/theme";
 import { useAppSettings } from "@/state/AppSettings";
 import { useThemeColors } from "@/state/useThemeColors";
-import { BibleChapter, getChapter, passageFromApiLink } from "@/lib/bibleApi";
+import {
+  BibleChapter,
+  CrossReference,
+  getChapter,
+  getCrossReferences,
+  passageFromApiLink,
+} from "@/lib/bibleApi";
 import { paginateVerses } from "@/lib/readerPagination";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/state/Auth";
@@ -56,6 +62,7 @@ export default function Read() {
   const [reload, setReload] = useState(0);
   const [openLastPage, setOpenLastPage] = useState(false);
   const [highlights, setHighlights] = useState<Highlight[]>([]);
+  const [crossReferences, setCrossReferences] = useState<CrossReference[]>([]);
   const [activeHighlight, setActiveHighlight] = useState<{
     start: number;
     end: number;
@@ -93,6 +100,13 @@ export default function Read() {
       });
     return () => controller.abort();
   }, [preferredTranslationId, currentBookId, currentChapter, reload]);
+  useEffect(() => {
+    const controller = new AbortController();
+    getCrossReferences(currentBookId, currentChapter, controller.signal)
+      .then(setCrossReferences)
+      .catch(() => setCrossReferences([]));
+    return () => controller.abort();
+  }, [currentBookId, currentChapter]);
   useEffect(() => {
     if (!user) {
       setHighlights([]);
@@ -141,6 +155,35 @@ export default function Read() {
   const next = () => {
     if (currentPage < pages.length) setCurrentPage(currentPage + 1);
     else moveChapter(chapter?.nextChapterApiLink || null, "first");
+  };
+  const currentPageVerses = pages[currentPage - 1] || pages[0] || [];
+  const pageCrossReferences = useMemo(() => {
+    const visible = new Set(currentPageVerses.map((verse) => verse.number));
+    return crossReferences
+      .filter((reference) => visible.has(reference.sourceVerse))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 8);
+  }, [crossReferences, currentPageVerses]);
+  const openCrossReference = async (reference: CrossReference) => {
+    const data = await getChapter(
+      preferredTranslationId,
+      reference.bookId,
+      reference.chapter,
+    );
+    const referencePages = paginateVerses(
+      data.verses,
+      Math.min(width, height),
+      readerFontSize,
+    );
+    const pageIndex = referencePages.findIndex((page) =>
+      page.some((verse) => verse.number === reference.verse),
+    );
+    settings.setCurrentPassage(
+      reference.bookId,
+      data.book.name,
+      reference.chapter,
+    );
+    setTimeout(() => setCurrentPage(Math.max(1, pageIndex + 1)), 0);
   };
   const startHighlight = (verse: number) => {
     setActiveHighlight({ start: verse, end: verse });
@@ -388,6 +431,36 @@ export default function Read() {
             <Text style={s.source}>
               Scripture: {chapter.translation.englishName}
             </Text>
+            {!!pageCrossReferences.length && (
+              <View style={s.crossRefPanel}>
+                <Text style={s.crossRefTitle}>RELATED PASSAGES</Text>
+                {pageCrossReferences.map((reference) => (
+                  <Pressable
+                    accessibilityLabel={`Open cross reference ${reference.bookId} ${reference.chapter}:${reference.verse}`}
+                    key={`${reference.sourceVerse}-${reference.bookId}-${reference.chapter}-${reference.verse}`}
+                    onPress={() => openCrossReference(reference)}
+                    style={s.crossRefRow}
+                  >
+                    <View style={s.crossRefCopy}>
+                      <Text style={s.crossRefRef}>
+                        {reference.bookId} {reference.chapter}:{reference.verse}
+                        {reference.endVerse
+                          ? `-${reference.endVerse}`
+                          : ""}
+                      </Text>
+                      <Text style={s.crossRefFrom}>
+                        Related to verse {reference.sourceVerse}
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name="chevron-forward"
+                      size={17}
+                      color={c.muted}
+                    />
+                  </Pressable>
+                ))}
+              </View>
+            )}
           </ScrollView>
           <View style={s.pageNav}>
             <Pressable
@@ -497,6 +570,31 @@ const styles = (c: AppColors) =>
     redLetter: { color: c.redLetter },
     num: { color: c.gold, fontSize: 11, fontWeight: "700" },
     source: { color: c.muted, fontSize: 9, textAlign: "center", marginTop: 12 },
+    crossRefPanel: {
+      borderTopWidth: 1,
+      borderColor: c.line,
+      marginTop: 22,
+      paddingTop: 16,
+    },
+    crossRefTitle: {
+      color: c.muted,
+      fontSize: 10,
+      fontWeight: "800",
+      letterSpacing: 1.2,
+      marginBottom: 8,
+    },
+    crossRefRow: {
+      minHeight: 48,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderBottomWidth: 1,
+      borderColor: c.line,
+      gap: 10,
+    },
+    crossRefCopy: { flex: 1 },
+    crossRefRef: { color: c.green, fontWeight: "800" },
+    crossRefFrom: { color: c.muted, fontSize: 10, marginTop: 2 },
     pageNav: {
       minHeight: 60,
       paddingHorizontal: 12,

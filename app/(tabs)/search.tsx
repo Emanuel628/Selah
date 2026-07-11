@@ -14,6 +14,10 @@ import { useRouter } from "expo-router";
 import { Screen } from "@/components/Screen";
 import { BibleChapter, getBooks, getChapter } from "@/lib/bibleApi";
 import { paginateVerses } from "@/lib/readerPagination";
+import {
+  buildScriptureIndex,
+  searchScriptureIndex,
+} from "@/lib/scriptureSearch";
 import { AppColors } from "@/lib/theme";
 import { useAppSettings } from "@/state/AppSettings";
 import { useThemeColors } from "@/state/useThemeColors";
@@ -36,6 +40,8 @@ export default function Search() {
   const [selected, setSelected] = useState<Book | null>(null);
   const [chapter, setChapter] = useState<BibleChapter | null>(null);
   const [loadingChapter, setLoadingChapter] = useState(false);
+  const [scriptureIndex, setScriptureIndex] = useState<any[]>([]);
+  const [indexing, setIndexing] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -49,6 +55,21 @@ export default function Search() {
     return () => controller.abort();
   }, [settings.preferredTranslationId]);
 
+  useEffect(() => {
+    const clean = query.trim();
+    if (clean.length < 4 || scriptureIndex.length) return;
+    const controller = new AbortController();
+    setIndexing(true);
+    buildScriptureIndex(settings.preferredTranslationId, controller.signal)
+      .then(setScriptureIndex)
+      .catch((reason) => {
+        if (reason?.name !== "AbortError")
+          setError("Scripture search could not be prepared.");
+      })
+      .finally(() => setIndexing(false));
+    return () => controller.abort();
+  }, [query, settings.preferredTranslationId, scriptureIndex.length]);
+
   const filteredBooks = useMemo(() => {
     const clean = query.trim().toLowerCase();
     if (!clean) return books;
@@ -57,6 +78,11 @@ export default function Search() {
       return haystack.includes(clean);
     });
   }, [books, query]);
+
+  const scriptureResults = useMemo(
+    () => searchScriptureIndex(scriptureIndex, query, 35),
+    [scriptureIndex, query],
+  );
 
   const pages = chapter
     ? paginateVerses(chapter.verses, Math.min(width, height), settings.readerFontSize)
@@ -76,6 +102,32 @@ export default function Search() {
     if (!selected || !chapter) return;
     settings.setCurrentPassage(selected.id, selected.name, chapter.chapterNumber);
     setTimeout(() => settings.setCurrentPage(page), 0);
+    router.push("/(tabs)");
+  };
+
+  const openSearchResult = async (result: {
+    bookId: string;
+    bookName: string;
+    chapter: number;
+    verse: number;
+  }) => {
+    setLoadingChapter(true);
+    const data = await getChapter(
+      settings.preferredTranslationId,
+      result.bookId,
+      result.chapter,
+    );
+    const resultPages = paginateVerses(
+      data.verses,
+      Math.min(width, height),
+      settings.readerFontSize,
+    );
+    const pageIndex = resultPages.findIndex((page) =>
+      page.some((verse) => verse.number === result.verse),
+    );
+    settings.setCurrentPassage(result.bookId, result.bookName, result.chapter);
+    setTimeout(() => settings.setCurrentPage(Math.max(1, pageIndex + 1)), 0);
+    setLoadingChapter(false);
     router.push("/(tabs)");
   };
 
@@ -122,9 +174,39 @@ export default function Search() {
           </View>
         )}
 
+        {!selected && query.trim().length >= 3 && (
+          <>
+            <Text style={s.label}>SCRIPTURE RESULTS</Text>
+            {indexing && (
+              <View style={s.state}>
+                <ActivityIndicator color={c.green} />
+                <Text style={s.muted}>Preparing Scripture search...</Text>
+              </View>
+            )}
+            {!indexing &&
+              scriptureResults.map((result) => (
+                <Pressable
+                  key={`${result.bookId}-${result.chapter}-${result.verse}`}
+                  onPress={() => openSearchResult(result)}
+                  style={s.result}
+                >
+                  <Text style={s.resultRef}>
+                    {result.bookName} {result.chapter}:{result.verse}
+                  </Text>
+                  <Text numberOfLines={3} style={s.resultText}>
+                    {result.text}
+                  </Text>
+                </Pressable>
+              ))}
+            {!indexing && !scriptureResults.length && (
+              <Text style={s.muted}>No verse text found. Try another word.</Text>
+            )}
+          </>
+        )}
+
         {!selected && (
           <>
-            <Text style={s.label}>BOOKS</Text>
+            <Text style={s.label}>PASSAGE JUMP</Text>
             {filteredBooks.map((book) => (
               <Pressable
                 key={book.id}
@@ -268,6 +350,16 @@ const styles = (c: AppColors) =>
       alignItems: "center",
       justifyContent: "center",
     },
+    result: {
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.line,
+      borderRadius: 12,
+      padding: 13,
+      marginBottom: 9,
+    },
+    resultRef: { color: c.green, fontWeight: "800", marginBottom: 5 },
+    resultText: { color: c.text, fontSize: 12, lineHeight: 18 },
     chapterText: { color: c.text, fontWeight: "800" },
     back: {
       minHeight: 44,

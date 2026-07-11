@@ -78,6 +78,34 @@ export default function Garden() {
           <Text style={s.newText}>New note</Text>
         </Pressable>
       </View>
+      <Pressable
+        accessibilityLabel="Open Garden Insights"
+        onPress={() => router.push("/garden-insights" as any)}
+        style={s.insights}
+      >
+        <Ionicons name="sparkles-outline" size={18} color={c.gold} />
+        <View style={s.insightsCopy}>
+          <Text style={s.insightsTitle}>Garden Insights</Text>
+          <Text style={s.insightsText}>
+            See themes, questions, applications, and connections forming.
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={c.muted} />
+      </Pressable>
+      <Pressable
+        accessibilityLabel="Open Knowledge Graph"
+        onPress={() => router.push("/knowledge-graph" as any)}
+        style={s.insights}
+      >
+        <Ionicons name="git-network-outline" size={18} color={c.green} />
+        <View style={s.insightsCopy}>
+          <Text style={s.insightsTitle}>Knowledge Graph</Text>
+          <Text style={s.insightsText}>
+            Browse connections between books, thought groups, tags, and notes.
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={c.muted} />
+      </Pressable>
       <View style={s.tools}>
         <View style={s.search}>
           <Ionicons name="search" size={18} color={c.muted} />
@@ -282,6 +310,22 @@ const styles = (c: AppColors) =>
       borderRadius: 11,
     },
     newText: { color: c.onAccent, fontWeight: "800", fontSize: 12 },
+    insights: {
+      marginHorizontal: 18,
+      marginBottom: 10,
+      minHeight: 58,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: c.line,
+      backgroundColor: c.surface,
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 14,
+      gap: 10,
+    },
+    insightsCopy: { flex: 1 },
+    insightsTitle: { color: c.text, fontWeight: "800" },
+    insightsText: { color: c.muted, fontSize: 10, marginTop: 2 },
     tools: {
       flexDirection: "row",
       gap: 8,

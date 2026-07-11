@@ -31,7 +31,15 @@ const sections = [
   ],
   [
     "Find a reflection",
-    "Use Garden filters to narrow notes by thought group, tags, Scripture book, or date. The Search tab is for finding a Bible passage by book, chapter, and page.",
+    "Use Garden filters to narrow notes by thought group, tags, Scripture book, or date. Open Garden Insights for synthesis, or Knowledge Graph to browse connections between tags, books, thought groups, and notes.",
+  ],
+  [
+    "Search and cross-references",
+    "Use the Search tab to jump to a passage or search verse text across your selected Bible version. In the Reader, related passages appear below the current page when cross-references are available.",
+  ],
+  [
+    "Word Study",
+    "Open Word Study from Settings to search a word or phrase across Scripture and your Garden. This is the first Pro study tool and will connect to paid entitlements when billing is live.",
   ],
   [
     "Study reminders",
@@ -47,7 +55,7 @@ const sections = [
   ],
   [
     "Free and Pro",
-    "Selah Free includes reading, Garden reflections, bookmarks, search, and reminders. The optional 30-day Pro trial records your choice now; paid billing will not begin unless a future subscription is clearly offered and accepted.",
+    "Selah Free includes reading, Garden reflections, bookmarks, passage search, and reminders. Pro preview tools include Garden Insights, Knowledge Graph, Word Study, priority Scripture search, and future AI-guided reflection. Paid billing will not begin unless a future subscription is clearly offered and accepted.",
   ],
 ] as const;
 
