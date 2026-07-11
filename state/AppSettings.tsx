@@ -39,6 +39,8 @@ type Settings = {
   setCurrentPage: (page: number) => void;
   bookmarkColor: string;
   setBookmarkColor: (color: string) => void;
+  highlightColor: string;
+  setHighlightColor: (color: string) => void;
   bookmark: {
     bookId: string;
     bookName: string;
@@ -75,6 +77,23 @@ type Settings = {
   ) => Promise<void>;
 };
 const Context = createContext<Settings | null>(null);
+
+const DEFAULTS = {
+  translationId: "BSB",
+  translationName: "Berean Standard Bible",
+  translationShortName: "BSB",
+  bookId: "GEN",
+  bookName: "Genesis",
+  chapter: 1,
+  page: 1,
+  bookmarkColor: "#D4A72C",
+  highlightColor: "#F7D774",
+  readerFontSize: 20,
+  reminderHour: 8,
+  reminderMinute: "00",
+  reminderPeriod: "AM" as const,
+  reminderDays: [1, 2, 3, 4, 5],
+};
 
 export function AppSettingsProvider({ children }: PropsWithChildren) {
   const { user } = useAuth();
@@ -116,12 +135,12 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
   }, [deviceScheme, followSystemTheme]);
   const [showVerseNumbers, setShowVerseNumbers] = useState(true);
   const [redLettering, setRedLettering] = useState(true);
-  const [preferredTranslationId, setPreferredTranslationId] = useState("BSB");
+  const [preferredTranslationId, setPreferredTranslationId] = useState(DEFAULTS.translationId);
   const [preferredTranslationName, setPreferredTranslationName] = useState(
-    "Berean Standard Bible",
+    DEFAULTS.translationName,
   );
   const [preferredTranslationShortName, setPreferredTranslationShortName] =
-    useState("BSB");
+    useState(DEFAULTS.translationShortName);
   const setPreferredTranslation = useCallback(
     (id: string, name: string, shortName: string) => {
       setPreferredTranslationId(id);
@@ -130,10 +149,10 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
     },
     [],
   );
-  const [currentBookId, setCurrentBookId] = useState("GEN");
-  const [currentBookName, setCurrentBookName] = useState("Genesis");
-  const [currentChapter, setCurrentChapter] = useState(1);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentBookId, setCurrentBookId] = useState(DEFAULTS.bookId);
+  const [currentBookName, setCurrentBookName] = useState(DEFAULTS.bookName);
+  const [currentChapter, setCurrentChapter] = useState(DEFAULTS.chapter);
+  const [currentPage, setCurrentPage] = useState(DEFAULTS.page);
   const setCurrentPassage = useCallback(
     (bookId: string, bookName: string, chapter: number) => {
       setCurrentBookId(bookId);
@@ -143,7 +162,21 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
     },
     [],
   );
-  const [bookmarkColor, setBookmarkColor] = useState("#D4A72C");
+  const [bookmarkColor, setBookmarkColor] = useState(DEFAULTS.bookmarkColor);
+  const [highlightColor, setHighlightColorState] = useState(
+    DEFAULTS.highlightColor,
+  );
+  const setHighlightColor = useCallback(
+    (color: string) => {
+      setHighlightColorState(color);
+      if (user)
+        supabase
+          .from("reader_preferences")
+          .upsert({ user_id: user.id, highlight_color: color })
+          .then(() => {});
+    },
+    [user],
+  );
   const [bookmark, setBookmark] = useState<{
     bookId: string;
     bookName: string;
@@ -174,9 +207,10 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
     },
     [user, preferredTranslationId, bookmarkColor],
   );
-  const [readerFontSize, setReaderFontSize] = useState(20);
+  const [readerFontSize, setReaderFontSize] = useState(DEFAULTS.readerFontSize);
   const [readerFullscreen, setReaderFullscreen] = useState(false);
   useEffect(() => {
+    if (user) return;
     AsyncStorage.getItem("selah.reader.preferences.v1").then((raw) => {
       if (!raw) return;
       try {
@@ -191,9 +225,11 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
           setRedLettering(saved.redLettering);
         if (typeof saved.readerFontSize === "number")
           setReaderFontSize(saved.readerFontSize);
+        if (typeof saved.highlightColor === "string")
+          setHighlightColorState(saved.highlightColor);
       } catch {}
     });
-  }, []);
+  }, [user?.id]);
   const saveReaderPreferences = useCallback(async () => {
     await AsyncStorage.setItem(
       "selah.reader.preferences.v1",
@@ -203,6 +239,7 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
         showVerseNumbers,
         redLettering,
         readerFontSize,
+        highlightColor,
       }),
     );
     if (user)
@@ -214,6 +251,7 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
         red_lettering: redLettering,
         reader_font_size: readerFontSize,
         bookmark_color: bookmarkColor,
+        highlight_color: highlightColor,
       });
   }, [
     user,
@@ -222,14 +260,39 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
     redLettering,
     readerFontSize,
     bookmarkColor,
+    highlightColor,
     followSystemTheme,
   ]);
-  const [reminderHour, setReminderHour] = useState(8);
-  const [reminderMinute, setReminderMinute] = useState("00");
-  const [reminderPeriod, setReminderPeriod] = useState<"AM" | "PM">("AM");
-  const [reminderDays, setReminderDays] = useState([1, 2, 3, 4, 5]);
+  const [reminderHour, setReminderHour] = useState(DEFAULTS.reminderHour);
+  const [reminderMinute, setReminderMinute] = useState(DEFAULTS.reminderMinute);
+  const [reminderPeriod, setReminderPeriod] = useState<"AM" | "PM">(
+    DEFAULTS.reminderPeriod,
+  );
+  const [reminderDays, setReminderDays] = useState(DEFAULTS.reminderDays);
   const [reminderEnabled, setReminderEnabled] = useState(true);
+  const resetAccountScopedState = useCallback(() => {
+    setPreferredTranslationId(DEFAULTS.translationId);
+    setPreferredTranslationName(DEFAULTS.translationName);
+    setPreferredTranslationShortName(DEFAULTS.translationShortName);
+    setCurrentBookId(DEFAULTS.bookId);
+    setCurrentBookName(DEFAULTS.bookName);
+    setCurrentChapter(DEFAULTS.chapter);
+    setCurrentPage(DEFAULTS.page);
+    setBookmark(null);
+    setBookmarkColor(DEFAULTS.bookmarkColor);
+    setHighlightColorState(DEFAULTS.highlightColor);
+    setShowVerseNumbers(true);
+    setRedLettering(true);
+    setReaderFontSize(DEFAULTS.readerFontSize);
+    setReaderFullscreen(false);
+    setReminderEnabled(true);
+    setReminderHour(DEFAULTS.reminderHour);
+    setReminderMinute(DEFAULTS.reminderMinute);
+    setReminderPeriod(DEFAULTS.reminderPeriod);
+    setReminderDays(DEFAULTS.reminderDays);
+  }, []);
   useEffect(() => {
+    resetAccountScopedState();
     if (!user) return;
     Promise.all([
       supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
@@ -267,7 +330,10 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
         setShowVerseNumbers(preferences.data.show_verse_numbers);
         setRedLettering(preferences.data.red_lettering);
         setReaderFontSize(preferences.data.reader_font_size);
-        setBookmarkColor(preferences.data.bookmark_color);
+        setBookmarkColor(preferences.data.bookmark_color || DEFAULTS.bookmarkColor);
+        setHighlightColorState(
+          preferences.data.highlight_color || DEFAULTS.highlightColor,
+        );
       }
       if (savedBookmark.data)
         setBookmark({
@@ -284,7 +350,7 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
         setReminderDays(reminder.data.days);
       }
     });
-  }, [user?.id, deviceScheme]);
+  }, [user?.id, deviceScheme, resetAccountScopedState]);
   useEffect(() => {
     if (user)
       supabase
@@ -333,6 +399,8 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
       setCurrentPage,
       bookmarkColor,
       setBookmarkColor,
+      highlightColor,
+      setHighlightColor,
       bookmark,
       saveBookmark,
       readerFontSize,
@@ -367,6 +435,8 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
       setCurrentPassage,
       currentPage,
       bookmarkColor,
+      highlightColor,
+      setHighlightColor,
       bookmark,
       saveBookmark,
       readerFontSize,

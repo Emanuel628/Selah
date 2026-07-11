@@ -92,6 +92,7 @@ export default function Settings() {
     reminderPeriod,
     reminderEnabled,
     bookmarkColor,
+    highlightColor,
     readerFontSize,
   } = useAppSettings();
   const { enabled: biometric, enable: setBiometric } = useBiometric();
@@ -226,6 +227,13 @@ export default function Settings() {
             onPress: () => router.push("/bookmark-settings"),
           })}
           {row({
+            icon: "color-wand-outline",
+            name: "Highlight Color",
+            detail: "Change",
+            detailColor: highlightColor,
+            onPress: () => router.push("/highlight-settings" as any),
+          })}
+          {row({
             icon: "chatbox-ellipses-outline",
             name: "Red Lettering",
             value: redLettering,
@@ -241,6 +249,18 @@ export default function Settings() {
         </View>
         <Text style={s.label}>STUDY TOOLS</Text>
         <View style={s.group}>
+          {row({
+            icon: "color-wand-outline",
+            name: "Highlights",
+            detail: "Saved",
+            onPress: () => router.push("/highlights" as any),
+          })}
+          {row({
+            icon: "sparkles-outline",
+            name: "Reflection Guide",
+            detail: "AI help",
+            onPress: () => router.push("/reflection-guide" as any),
+          })}
           {row({
             icon: "sparkles-outline",
             name: "Garden Insights",

@@ -19,7 +19,7 @@ const sections = [
   ],
   [
     "Highlights",
-    "Long-press a verse to begin a highlight. Keep your finger down and drag through the verses you want included, then lift your finger to save the highlight to that Scripture location.",
+    "Long-press a verse to begin a highlight. Keep your finger down and drag through the verses you want included, then lift your finger to save it. Long-press an already highlighted verse to remove that saved highlight. Choose your preferred highlight color in Settings, and review saved highlights from Settings > Highlights.",
   ],
   [
     "Bookmarks",
@@ -35,7 +35,7 @@ const sections = [
   ],
   [
     "Search and cross-references",
-    "Use the Search tab to jump to a passage or search verse text across your selected Bible version. In the Reader, related passages appear below the current page when cross-references are available.",
+    "Use the Search tab to search verse text across your selected Bible version. Use the down arrow on Read when you want to jump to a book, chapter, or page. In the Reader, related passages appear below the current page when cross-references are available.",
   ],
   [
     "Word Study",
@@ -55,7 +55,7 @@ const sections = [
   ],
   [
     "Free and Pro",
-    "Selah Free includes reading, Garden reflections, bookmarks, passage search, and reminders. Pro preview tools include Garden Insights, Knowledge Graph, Word Study, priority Scripture search, and future AI-guided reflection. Paid billing will not begin unless a future subscription is clearly offered and accepted.",
+    "Selah Free includes reading, Garden reflections, bookmarks, Scripture search, highlights, and reminders. Pro tools include Garden Insights, Knowledge Graph, Word Study, cross-reference study, and AI-guided reflection. App Store billing is wired through the subscription page and requires the Selah Pro product to be active in App Store Connect.",
   ],
 ] as const;
 

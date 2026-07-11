@@ -1,19 +1,32 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useMemo, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { useIAP, type Purchase } from "expo-iap";
 import { DetailScreen } from "@/components/DetailScreen";
 import { supabase } from "@/lib/supabase";
 import { AppColors } from "@/lib/theme";
 import { useAuth } from "@/state/Auth";
 import { useThemeColors } from "@/state/useThemeColors";
 
+const PRODUCT_ID =
+  process.env.EXPO_PUBLIC_SELAH_PRO_PRODUCT_ID || "selah_pro_monthly";
+
 const features = [
-  "Scripture reading and page navigation",
-  "Garden reflections, search, filters, and tags",
-  "Bookmarks and study reminders",
-  "Garden Insights synthesis and guided reflection",
-  "Knowledge Graph connections across notes",
-  "Priority Scripture search and cross-reference study",
+  "Full Scripture search",
+  "Cross-reference study panel",
+  "Saved highlights library",
+  "Garden Insights synthesis",
+  "AI-guided reflection tied to your notes",
+  "Knowledge Graph connections",
 ];
 
 export default function Subscription() {
@@ -21,59 +34,159 @@ export default function Subscription() {
   const c = useThemeColors();
   const s = useMemo(() => styles(c), [c]);
   const [tier, setTier] = useState<"free" | "pro">("free");
-  const [end, setEnd] = useState<string | null>(null);
+  const [status, setStatus] = useState("Free");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const recordPurchase = async (purchase: Purchase) => {
+    if (!user) return;
+    setBusy(true);
+    const { error } = await supabase.functions.invoke(
+      "record-app-store-purchase",
+      { body: { purchase, productId: PRODUCT_ID } },
+    );
+    setBusy(false);
+    if (error) {
+      Alert.alert("Purchase received", error.message);
+      return;
+    }
+    setTier("pro");
+    setStatus("Pro active");
+    Alert.alert("Selah Pro active", "Your Pro access is now active.");
+  };
+
+  const {
+    connected,
+    subscriptions,
+    fetchProducts,
+    requestPurchase,
+    finishTransaction,
+    restorePurchases,
+    hasActiveSubscriptions,
+  } = useIAP({
+    onPurchaseSuccess: async (purchase) => {
+      await recordPurchase(purchase);
+      await finishTransaction({ purchase, isConsumable: false });
+    },
+    onPurchaseError: (error) => setMessage(error.message),
+    onError: (error) => setMessage(error.message),
+  });
+
   useEffect(() => {
     if (!user) return;
     supabase
       .from("profiles")
-      .select("subscription_tier,trial_ends_at")
+      .select("subscription_tier,subscription_status,trial_ends_at")
       .eq("id", user.id)
       .maybeSingle()
       .then(({ data }) => {
-        if (data) {
-          setTier(data.subscription_tier);
-          setEnd(data.trial_ends_at);
-        }
+        if (!data) return;
+        setTier(data.subscription_tier || "free");
+        const trialEnd = data.trial_ends_at ? new Date(data.trial_ends_at) : null;
+        const days = trialEnd
+          ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000))
+          : null;
+        setStatus(
+          data.subscription_tier === "pro"
+            ? days
+              ? `Pro trial · ${days} days`
+              : data.subscription_status || "Pro active"
+            : "Free",
+        );
       });
   }, [user?.id]);
-  const days = end
-    ? Math.max(0, Math.ceil((new Date(end).getTime() - Date.now()) / 86400000))
-    : null;
+
+  useEffect(() => {
+    if (!connected) return;
+    fetchProducts({ skus: [PRODUCT_ID], type: "subs" }).catch(() => {});
+  }, [connected, fetchProducts]);
+
+  const product = subscriptions.find((item) => item.id === PRODUCT_ID);
+
+  const buy = async () => {
+    if (!user) {
+      Alert.alert("Sign in required", "Create an account or sign in first.");
+      return;
+    }
+    setMessage("");
+    if (!product) {
+      setMessage(
+        "The App Store subscription product is not available yet. Confirm the product ID in App Store Connect.",
+      );
+      return;
+    }
+    await requestPurchase({
+      type: "subs",
+      request: {
+        ios: { sku: PRODUCT_ID },
+        apple: { sku: PRODUCT_ID },
+        android: { skus: [PRODUCT_ID] },
+        google: { skus: [PRODUCT_ID] },
+      },
+    });
+  };
+
+  const restore = async () => {
+    setMessage("");
+    setBusy(true);
+    await restorePurchases();
+    const active = await hasActiveSubscriptions([PRODUCT_ID]);
+    setBusy(false);
+    if (active) {
+      setTier("pro");
+      setStatus("Pro active");
+      setMessage("Purchase restored. Pro access is active.");
+    } else {
+      setMessage("No active Selah Pro subscription was found for this Apple ID.");
+    }
+  };
+
   return (
     <DetailScreen title="Your Selah plan">
       <ScrollView contentContainerStyle={s.body}>
         <View style={s.card}>
           <Text style={s.eyebrow}>CURRENT PLAN</Text>
-          <Text style={s.title}>
-            {tier === "pro" ? "Selah Pro Trial" : "Selah Free"}
-          </Text>
-          <Text style={s.status}>
-            {tier === "pro" && days !== null
-              ? `${days} days remaining in your free trial`
-              : "Your core Scripture garden is free."}
-          </Text>
-          {features.map((feature, index) => (
+          <Text style={s.title}>{tier === "pro" ? "Selah Pro" : "Selah Free"}</Text>
+          <Text style={s.status}>{status}</Text>
+          {features.map((feature) => (
             <View key={feature} style={s.feature}>
               <Ionicons
-                name={
-                  index >= 3 && tier === "free"
-                    ? "lock-closed-outline"
-                    : "checkmark-circle"
-                }
+                name={tier === "pro" ? "checkmark-circle" : "lock-closed-outline"}
                 size={19}
-                color={index >= 3 ? c.gold : c.green}
+                color={tier === "pro" ? c.green : c.gold}
               />
               <Text style={s.featureText}>{feature}</Text>
             </View>
           ))}
         </View>
+
         <View style={s.notice}>
-          <Text style={s.noticeTitle}>No billing is active</Text>
+          <Text style={s.noticeTitle}>App Store subscription</Text>
           <Text style={s.noticeText}>
-            You will not be charged when the trial ends. Stripe and App Store
-            subscription billing will be added before paid conversion is
-            offered, with pricing and consent shown clearly first.
+            Product: {product?.displayName || product?.title || PRODUCT_ID}
           </Text>
+          <Text style={s.price}>{product?.displayPrice || "Price unavailable"}</Text>
+          {Platform.OS === "web" && (
+            <Text style={s.noticeText}>
+              Purchases must be tested on iOS through TestFlight or a development
+              build.
+            </Text>
+          )}
+          {!!message && <Text style={s.message}>{message}</Text>}
+          <Pressable
+            disabled={busy}
+            onPress={buy}
+            style={[s.button, busy && s.disabled]}
+          >
+            {busy ? (
+              <ActivityIndicator color={c.onAccent} />
+            ) : (
+              <Text style={s.buttonText}>Start Selah Pro</Text>
+            )}
+          </Pressable>
+          <Pressable onPress={restore} style={s.restore}>
+            <Text style={s.restoreText}>Restore Purchases</Text>
+          </Pressable>
         </View>
       </ScrollView>
     </DetailScreen>
@@ -82,7 +195,7 @@ export default function Subscription() {
 
 const styles = (c: AppColors) =>
   StyleSheet.create({
-    body: { padding: 20 },
+    body: { padding: 20, paddingBottom: 40 },
     card: {
       backgroundColor: c.surface,
       borderRadius: 18,
@@ -113,4 +226,18 @@ const styles = (c: AppColors) =>
     },
     noticeTitle: { color: c.text, fontWeight: "800" },
     noticeText: { color: c.muted, fontSize: 11, lineHeight: 18, marginTop: 6 },
+    price: { color: c.text, fontSize: 20, fontWeight: "900", marginTop: 10 },
+    message: { color: c.muted, fontSize: 11, lineHeight: 17, marginTop: 10 },
+    button: {
+      height: 50,
+      borderRadius: 14,
+      backgroundColor: c.green,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 14,
+    },
+    disabled: { opacity: 0.55 },
+    buttonText: { color: c.onAccent, fontWeight: "900" },
+    restore: { minHeight: 44, alignItems: "center", justifyContent: "center" },
+    restoreText: { color: c.green, fontWeight: "800" },
   });

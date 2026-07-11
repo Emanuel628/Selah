@@ -38,6 +38,13 @@ export default function GardenInsights() {
           <Text style={s.eyebrow}>SYNTHESIS</Text>
           <Text style={s.summary}>{insights.summary}</Text>
           <Text style={s.prompt}>{insights.prompt}</Text>
+          <Pressable
+            onPress={() => router.push("/reflection-guide" as any)}
+            style={s.guideButton}
+          >
+            <Ionicons name="sparkles-outline" size={17} color={c.onAccent} />
+            <Text style={s.guideText}>Open Reflection Guide</Text>
+          </Pressable>
         </View>
         <Section title="Recurring Themes" items={insights.tags} c={c} s={s} />
         <Section title="Thought Group Balance" items={insights.groups} c={c} s={s} />
@@ -155,6 +162,17 @@ const styles = (c: AppColors) =>
     },
     summary: { color: c.text, fontSize: 17, fontWeight: "800", lineHeight: 24, marginTop: 8 },
     prompt: { color: c.muted, fontSize: 12, lineHeight: 19, marginTop: 9 },
+    guideButton: {
+      minHeight: 44,
+      borderRadius: 12,
+      backgroundColor: c.green,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 7,
+      marginTop: 14,
+    },
+    guideText: { color: c.onAccent, fontWeight: "900", fontSize: 12 },
     section: {
       backgroundColor: c.surface,
       borderWidth: 1,

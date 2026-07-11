@@ -15,7 +15,7 @@ test("primary navigation exposes the approved top-level pages", async ({
   await page.getByText("Garden", { exact: true }).last().click();
   await expect(page.getByText("My Garden", { exact: true })).toBeVisible();
   await page.getByText("Search", { exact: true }).last().click();
-  await expect(page.getByText("Passage Search", { exact: true })).toBeVisible();
+  await expect(page.getByText("Scripture Search", { exact: true })).toBeVisible();
   await page.getByText("Settings", { exact: true }).last().click();
   await expect(page.getByText("READER SETTINGS")).toBeVisible();
 });
@@ -248,13 +248,12 @@ test("Garden supports detail and create-note flows", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("Search finds Bible passages by book, chapter, and page", async ({ page }) => {
-  await page.goto("/search");
-  await page.getByPlaceholder("Find a book or passage").fill("exo");
-  await expect(page.getByText("Exodus", { exact: true })).toBeVisible();
+test("Reader passage picker finds Bible passages by book, chapter, and page", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Choose book and chapter").click();
   await page.getByText("Exodus", { exact: true }).click();
   await page.getByLabel("Exodus chapter 3", { exact: true }).click();
-  await expect(page.getByText("EXODUS 3 PAGES")).toBeVisible();
+  await expect(page.getByText("PAGE", { exact: true })).toBeVisible();
   await page.getByLabel("Exodus chapter 3 page 1", { exact: true }).click();
   await expect(
     page.getByText("Exodus 3", { exact: true }).first(),
@@ -263,7 +262,7 @@ test("Search finds Bible passages by book, chapter, and page", async ({ page }) 
 
 test("Search finds verse text across Scripture", async ({ page }) => {
   await page.goto("/search");
-  await page.getByPlaceholder("Find a book or passage").fill("created heavens");
+  await page.getByPlaceholder("Search Bible text").fill("created heavens");
   await expect(page.getByText("Genesis 1:1", { exact: true })).toBeVisible({
     timeout: 20000,
   });
@@ -352,15 +351,41 @@ test("Word Study searches Scripture and Garden terms", async ({ page }) => {
 
 test("Reader supports verse highlighting", async ({ page }) => {
   await page.goto("/");
-  const verse = page
+  await page.evaluate(() => {
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith("selah.local.highlights."))
+      .forEach((key) => localStorage.removeItem(key));
+  });
+  await page.reload();
+  const verseText = page
     .getByText(/In the beginning God created the heavens and the earth/)
     .last();
-  await expect(verse).toBeVisible();
-  await verse.click({ delay: 700 });
-  const highlighted = await verse.evaluate(
+  const verse = verseText;
+  await expect(verseText).toBeVisible();
+  await verse.click();
+  const highlighted = await verseText.evaluate(
     (element) => getComputedStyle(element.parentElement as HTMLElement).backgroundColor,
   );
   expect(highlighted).toBe("rgba(247, 215, 116, 0.38)");
+  await verse.click();
+  await expect
+    .poll(() =>
+      verse.evaluate(
+        (element) =>
+          getComputedStyle(element.parentElement as HTMLElement)
+            .backgroundColor,
+      ),
+    )
+    .toBe("rgba(0, 0, 0, 0)");
+});
+
+test("Settings changes highlight color and exposes saved highlights", async ({ page }) => {
+  await page.goto("/settings");
+  await page.getByText("Highlight Color").click();
+  await page.getByLabel("Rose highlight color").click();
+  await page.getByLabel("Go back").click();
+  await page.getByText("Highlights", { exact: true }).click();
+  await expect(page.getByText("No highlights yet")).toBeVisible();
 });
 
 test("Help explains the complete app flow", async ({ page }) => {
@@ -370,7 +395,7 @@ test("Help explains the complete app flow", async ({ page }) => {
   await expect(
     page.getByText("Face ID and biometrics", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("Highlights", { exact: true })).toBeVisible();
+  await expect(page.getByText("Highlights", { exact: true }).last()).toBeVisible();
   await expect(page.getByText("Search and cross-references", { exact: true })).toBeVisible();
   await expect(page.getByText("Word Study", { exact: true }).last()).toBeVisible();
   await expect(page.getByText("Free and Pro", { exact: true })).toBeVisible();

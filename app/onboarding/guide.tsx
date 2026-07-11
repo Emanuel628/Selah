@@ -19,7 +19,7 @@ const steps = [
   [
     "leaf-outline",
     "Grow your Garden",
-    "Filter, edit, and reconnect your reflections in Garden. Use Search when you want to jump directly to a Bible book, chapter, and page.",
+    "Filter, edit, and reconnect your reflections in Garden. Use Search for Bible text search, and use the down arrow on Read to jump by book, chapter, and page.",
   ],
   [
     "notifications-outline",

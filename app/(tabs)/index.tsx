@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Screen } from "@/components/Screen";
 import { AppColors } from "@/lib/theme";
 import { useAppSettings } from "@/state/AppSettings";
@@ -50,6 +51,7 @@ export default function Read() {
     setCurrentPage,
     readerFontSize,
     bookmarkColor,
+    highlightColor,
     bookmark,
     saveBookmark,
     readerFullscreen,
@@ -62,14 +64,22 @@ export default function Read() {
   const [reload, setReload] = useState(0);
   const [openLastPage, setOpenLastPage] = useState(false);
   const [highlights, setHighlights] = useState<Highlight[]>([]);
+  const highlightsRef = useRef<Highlight[]>([]);
   const [crossReferences, setCrossReferences] = useState<CrossReference[]>([]);
   const [activeHighlight, setActiveHighlight] = useState<{
+    start: number;
+    end: number;
+  } | null>(null);
+  const activeHighlightRef = useRef<{
     start: number;
     end: number;
   } | null>(null);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const lastTap = useRef(0);
+  const webRemoveTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>(
+    {},
+  );
   const verseLayouts = useRef<Record<number, { y: number; height: number }>>(
     {},
   );
@@ -108,8 +118,11 @@ export default function Read() {
     return () => controller.abort();
   }, [currentBookId, currentChapter]);
   useEffect(() => {
+    const localKey = `selah.local.highlights.${preferredTranslationId}.${currentBookId}.${currentChapter}.${currentPage}`;
     if (!user) {
-      setHighlights([]);
+      AsyncStorage.getItem(localKey)
+        .then((raw) => setHighlights(raw ? JSON.parse(raw) : []))
+        .catch(() => setHighlights([]));
       return;
     }
     supabase
@@ -123,6 +136,13 @@ export default function Read() {
         setHighlights((data || []).filter((item) => item.page === currentPage));
       });
   }, [user?.id, preferredTranslationId, currentBookId, currentChapter, currentPage]);
+  const localHighlightKey = `selah.local.highlights.${preferredTranslationId}.${currentBookId}.${currentChapter}.${currentPage}`;
+  useEffect(() => {
+    highlightsRef.current = highlights;
+  }, [highlights]);
+  useEffect(() => {
+    activeHighlightRef.current = activeHighlight;
+  }, [activeHighlight]);
   const pages = useMemo(
     () =>
       chapter
@@ -185,9 +205,84 @@ export default function Read() {
     );
     setTimeout(() => setCurrentPage(Math.max(1, pageIndex + 1)), 0);
   };
-  const startHighlight = (verse: number) => {
+  const highlightForVerse = (verse: number) => {
+    const saved = highlights.find(
+      (item) => verse >= item.verse_start && verse <= item.verse_end,
+    );
+    if (saved) return saved.color;
+    if (
+      activeHighlight &&
+      verse >= Math.min(activeHighlight.start, activeHighlight.end) &&
+      verse <= Math.max(activeHighlight.start, activeHighlight.end)
+    )
+      return highlightColor;
+    return null;
+  };
+  const removeHighlightForVerse = async (verse: number) => {
+    if (
+      activeHighlight &&
+      verse >= Math.min(activeHighlight.start, activeHighlight.end) &&
+      verse <= Math.max(activeHighlight.start, activeHighlight.end)
+    ) {
+      setActiveHighlight(null);
+      activeHighlightRef.current = null;
+      return true;
+    }
+    const currentHighlights = highlightsRef.current;
+    const matches = currentHighlights.filter(
+      (item) => verse >= item.verse_start && verse <= item.verse_end,
+    );
+    if (!matches.length) return false;
+    const matchIds = new Set(matches.map((item) => item.id).filter(Boolean));
+    const nextItems = currentHighlights.filter(
+      (item) => !matches.includes(item),
+    );
+    highlightsRef.current = nextItems;
+    setHighlights(nextItems);
+    if (user && matchIds.size)
+      await supabase
+        .from("scripture_highlights")
+        .delete()
+        .in("id", Array.from(matchIds));
+    if (!user) {
+      await AsyncStorage.setItem(localHighlightKey, JSON.stringify(nextItems));
+    }
+    return true;
+  };
+  const startHighlight = async (verse: number) => {
+    if (await removeHighlightForVerse(verse)) return;
+    activeHighlightRef.current = { start: verse, end: verse };
     setActiveHighlight({ start: verse, end: verse });
   };
+  const toggleSingleVerseHighlight = async (verse: number) => {
+    if (await removeHighlightForVerse(verse)) return;
+    activeHighlightRef.current = { start: verse, end: verse };
+    setActiveHighlight({ start: verse, end: verse });
+    setTimeout(() => void finishHighlight(), 0);
+  };
+  const webClickToggleProps = (verse: number) =>
+    Platform.OS === "web"
+      ? ({
+          onClick: () => void toggleSingleVerseHighlight(verse),
+        } as object)
+      : {};
+  const longPressRemoveProps = (verse: number) => ({
+    onPressIn: () => {
+      if (!highlightForVerse(verse)) {
+        webRemoveTimers.current[verse] = setTimeout(() => {
+          void startHighlight(verse);
+        }, 450);
+        return;
+      }
+      webRemoveTimers.current[verse] = setTimeout(() => {
+        void removeHighlightForVerse(verse);
+      }, 450);
+    },
+    onPressOut: () => {
+      clearTimeout(webRemoveTimers.current[verse]);
+      if (activeHighlightRef.current) void finishHighlight();
+    },
+  });
   const moveHighlight = (event: GestureResponderEvent) => {
     if (!activeHighlight) return;
     const y = event.nativeEvent.locationY;
@@ -196,20 +291,22 @@ export default function Read() {
     });
     if (match) {
       const verse = Number(match[0]);
-      setActiveHighlight((current) =>
-        current ? { ...current, end: verse } : current,
-      );
+      setActiveHighlight((current) => {
+        const next = current ? { ...current, end: verse } : current;
+        activeHighlightRef.current = next;
+        return next;
+      });
     }
   };
   const finishHighlight = async () => {
-    if (!activeHighlight || !user) {
+    const range = activeHighlightRef.current || activeHighlight;
+    if (!range) {
       setActiveHighlight(null);
       return;
     }
-    const verse_start = Math.min(activeHighlight.start, activeHighlight.end);
-    const verse_end = Math.max(activeHighlight.start, activeHighlight.end);
-    const payload = {
-      user_id: user.id,
+    const verse_start = Math.min(range.start, range.end);
+    const verse_end = Math.max(range.start, range.end);
+    const basePayload = {
       translation_id: preferredTranslationId,
       book_id: currentBookId,
       book_name: currentBookName,
@@ -217,11 +314,25 @@ export default function Read() {
       page: currentPage,
       verse_start,
       verse_end,
-      color: "#F7D774",
+      color: highlightColor,
     };
-    setHighlights((items) => [...items, payload]);
+    activeHighlightRef.current = null;
     setActiveHighlight(null);
-    await supabase.from("scripture_highlights").insert(payload);
+    if (!user) {
+      const localPayload = { ...basePayload, id: String(Date.now()) };
+      const nextItems = [...highlightsRef.current, localPayload];
+      highlightsRef.current = nextItems;
+      setHighlights(nextItems);
+      await AsyncStorage.setItem(localHighlightKey, JSON.stringify(nextItems));
+      return;
+    }
+    const payload = { ...basePayload, user_id: user.id };
+    const { data } = await supabase
+      .from("scripture_highlights")
+      .insert(payload)
+      .select("id,verse_start,verse_end,color,page")
+      .single();
+    setHighlights((items) => [...items, data || payload]);
   };
   const onTouchStart = (event: GestureResponderEvent) => {
     touchStartX.current = event.nativeEvent.pageX;
@@ -246,13 +357,10 @@ export default function Read() {
     if (dx < 0) next();
     else previous();
   };
-  const isHighlighted = (verse: number) =>
-    highlights.some(
-      (item) => verse >= item.verse_start && verse <= item.verse_end,
-    ) ||
-    (activeHighlight &&
-      verse >= Math.min(activeHighlight.start, activeHighlight.end) &&
-      verse <= Math.max(activeHighlight.start, activeHighlight.end));
+  const highlightStyle = (verse: number) => {
+    const color = highlightForVerse(verse);
+    return color ? [s.highlighted, { backgroundColor: `${color}61` }] : null;
+  };
   const isBookmarked =
     bookmark?.bookId === currentBookId &&
     bookmark.chapter === currentChapter &&
@@ -287,15 +395,32 @@ export default function Read() {
         >
           {(pages[currentPage - 1] || pages[0] || []).map((verse) => (
             <Pressable
+              accessibilityLabel={`Verse ${verse.number}`}
               key={verse.number}
-              onPress={handleFullscreenTap}
-              onLongPress={() => startHighlight(verse.number)}
+              onPress={() => {
+                if (highlightForVerse(verse.number))
+                  void removeHighlightForVerse(verse.number);
+                else handleFullscreenTap();
+              }}
+              onLongPress={() => void startHighlight(verse.number)}
+              {...longPressRemoveProps(verse.number)}
+              {...(Platform.OS === "web"
+                ? ({ onDoubleClick: () => setReaderFullscreen(false) } as object)
+                : {})}
               onLayout={(event) => {
                 verseLayouts.current[verse.number] = event.nativeEvent.layout;
               }}
-              style={isHighlighted(verse.number) ? s.highlighted : null}
+              style={highlightStyle(verse.number)}
             >
               <Text
+              onPress={() => {
+                if (highlightForVerse(verse.number))
+                  void removeHighlightForVerse(verse.number);
+                else handleFullscreenTap();
+              }}
+              {...(Platform.OS === "web"
+                ? ({ onDoubleClick: () => setReaderFullscreen(false) } as object)
+                : {})}
               style={[
                 s.verse,
                 {
@@ -358,6 +483,13 @@ export default function Read() {
             color={bookmarkColor}
           />
         </Pressable>
+        <Pressable
+          accessibilityLabel="Open reflection guide"
+          onPress={() => router.push("/reflection-guide" as any)}
+          style={s.iconButton}
+        >
+          <Ionicons name="sparkles-outline" size={20} color={c.muted} />
+        </Pressable>
       </View>
       {bookmark && !isBookmarked && (
         <Pressable
@@ -406,14 +538,26 @@ export default function Read() {
             </Text>
             {(pages[currentPage - 1] || pages[0] || []).map((verse) => (
               <Pressable
+                accessibilityLabel={`Verse ${verse.number}`}
                 key={verse.number}
-                onLongPress={() => startHighlight(verse.number)}
+                onPress={() => {
+                  if (highlightForVerse(verse.number))
+                    void removeHighlightForVerse(verse.number);
+                }}
+                onLongPress={() => void startHighlight(verse.number)}
+                {...webClickToggleProps(verse.number)}
+                {...longPressRemoveProps(verse.number)}
                 onLayout={(event) => {
                   verseLayouts.current[verse.number] = event.nativeEvent.layout;
                 }}
-                style={isHighlighted(verse.number) ? s.highlighted : null}
+                style={highlightStyle(verse.number)}
               >
                 <Text
+                onPress={() => {
+                  if (highlightForVerse(verse.number))
+                    void removeHighlightForVerse(verse.number);
+                }}
+                {...webClickToggleProps(verse.number)}
                 style={[
                   s.verse,
                   {

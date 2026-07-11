@@ -17,7 +17,8 @@
         }
       ],
       "./plugins/with-local-notifications",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-iap"
     ],
     "experiments": {
       "typedRoutes": true

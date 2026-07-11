@@ -22,9 +22,9 @@ contains, while tags describe what that reflection is about. Future synthesis
 features can use those relationships to surface connections across passages.
 
 ## Feature Ecosystem
-- Reading: Multi-Translation Engine, Themes, Font Scaling, Red Letter
+- Reading: Multi-Translation Engine, Themes, Font Scaling, Red Letter, Saved Highlights
 - Garden: Insight Entries, Garden Insights, Knowledge Graph
-- Pro: Word Study, Garden Synthesis, Priority Search
+- Pro: Word Study, Garden Synthesis, Scripture Search, Cross References, AI Reflection Guide
 - Settings: Face ID Login
 - Engagement: Study Reminders
 
@@ -51,15 +51,17 @@ switch appearances from Settings → Dark Mode.
 - Full Scripture search with local translation indexing
 - Cross-reference panel for the current reading page
 - Garden Insights synthesis from reflections, tags, thought groups, and books
+- AI-guided reflection screen tied to the current passage and prior Garden notes, with a deterministic fallback until OpenAI keys are configured
 - Word Study across Scripture and Garden notes
 - Knowledge Graph clusters for tags, books, thought groups, and connected notes
+- Saved Scripture highlights with preferred highlight color, exact passage/page anchoring, long-press removal, and a highlights review page
+- App Store in-app purchase integration path for Selah Pro purchase and restore flows
 
 ## Remaining
-- Production subscription billing and entitlements
+- App Store Connect subscription product activation and production server-side receipt verification
 - Email provider keys for account/subscription confirmation emails
-- Real AI synthesis keys and server-side guided reflection generation
-- Production-grade Pro enforcement around paid-only features
-- App Store subscription products and entitlement webhooks
+- OpenAI API key configuration for live AI reflection generation
+- App Store entitlement webhooks / App Store Server API secrets for automatic renewals, cancellations, and refunds
 
 ## Technical Architecture
 - Contextual Anchoring

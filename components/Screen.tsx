@@ -16,7 +16,7 @@ export function Screen({
       {
         Read: "Read",
         Garden: "My Garden",
-        Search: "Passage Search",
+        Search: "Scripture Search",
         You: "Settings",
       } as Record<string, string>
     )[title] ?? title;
