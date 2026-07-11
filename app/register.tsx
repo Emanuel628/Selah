@@ -24,6 +24,7 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const valid =
     name.trim().length > 1 &&
     /^\S+@\S+\.\S+$/.test(email.trim()) &&
@@ -76,10 +77,23 @@ export default function Register() {
         accessibilityLabel="Create Password"
         value={password}
         onChangeText={setPassword}
-        secureTextEntry
+        secureTextEntry={!showPassword}
         autoComplete="new-password"
         style={s.input}
       />
+      <Pressable
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: showPassword }}
+        onPress={() => setShowPassword((value) => !value)}
+        style={local.showRow}
+      >
+        <Ionicons
+          name={showPassword ? "checkbox" : "square-outline"}
+          size={20}
+          color={c.green}
+        />
+        <Text style={local.showText}>Show password</Text>
+      </Pressable>
       <Text style={local.requirementsTitle}>Password must include:</Text>
       <View style={local.requirements}>
         {passwordRequirements.map((item) => {
@@ -138,4 +152,13 @@ const styles = (c: AppColors) =>
     met: { color: c.green },
     error: { color: c.danger, fontSize: 11, lineHeight: 16, marginBottom: 8 },
     disabled: { opacity: 0.45 },
+    showRow: {
+      minHeight: 40,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginTop: -8,
+      marginBottom: 8,
+    },
+    showText: { color: c.text, fontSize: 12 },
   });

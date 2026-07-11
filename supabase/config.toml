@@ -9,7 +9,7 @@ max_rows = 1000
 [auth]
 enabled = true
 site_url = "http://localhost:8081"
-additional_redirect_urls = ["http://localhost:8081/update-password", "selah://update-password"]
+additional_redirect_urls = ["http://localhost:8081/update-password", "selah://update-password", "selah:///update-password", "selah:///bible-version", "selah://**"]
 jwt_expiry = 3600
 enable_signup = true
 

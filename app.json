@@ -5,7 +5,8 @@
     "version": "1.0.0",
     "scheme": "selah",
     "orientation": "portrait",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
     "plugins": ["expo-router", "@react-native-community/datetimepicker"],
     "experiments": {
       "typedRoutes": true
@@ -13,13 +14,15 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.emanuel62893.selah",
+      "icon": "./assets/icon.png",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#091a18"
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#FFFAF0"
       }
     },
     "web": {

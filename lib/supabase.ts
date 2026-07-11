@@ -19,6 +19,7 @@ export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
     persistSession: true,
     detectSessionInUrl: false,
     lock: processLock,
+    flowType: "pkce",
   },
 });
 

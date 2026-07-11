@@ -10,6 +10,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "@/state/Auth";
 import { supabase } from "@/lib/supabase";
+import { useColorScheme } from "react-native";
 
 type Settings = {
   darkMode: boolean;
@@ -72,7 +73,16 @@ const Context = createContext<Settings | null>(null);
 
 export function AppSettingsProvider({ children }: PropsWithChildren) {
   const { user } = useAuth();
-  const [darkMode, setDarkMode] = useState(true);
+  const deviceScheme = useColorScheme();
+  const [darkMode, setDarkModeState] = useState(deviceScheme !== "light");
+  const [followSystemTheme, setFollowSystemTheme] = useState(true);
+  const setDarkMode = useCallback((value: boolean) => {
+    setFollowSystemTheme(false);
+    setDarkModeState(value);
+  }, []);
+  useEffect(() => {
+    if (followSystemTheme) setDarkModeState(deviceScheme !== "light");
+  }, [deviceScheme, followSystemTheme]);
   const [showVerseNumbers, setShowVerseNumbers] = useState(true);
   const [redLettering, setRedLettering] = useState(true);
   const [preferredTranslationId, setPreferredTranslationId] = useState("BSB");
@@ -139,7 +149,10 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
       if (!raw) return;
       try {
         const saved = JSON.parse(raw);
-        if (typeof saved.darkMode === "boolean") setDarkMode(saved.darkMode);
+        if (typeof saved.darkMode === "boolean") {
+          setFollowSystemTheme(false);
+          setDarkModeState(saved.darkMode);
+        }
         if (typeof saved.showVerseNumbers === "boolean")
           setShowVerseNumbers(saved.showVerseNumbers);
         if (typeof saved.redLettering === "boolean")
@@ -154,6 +167,7 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
       "selah.reader.preferences.v1",
       JSON.stringify({
         darkMode,
+        themeMode: followSystemTheme ? "system" : darkMode ? "dark" : "light",
         showVerseNumbers,
         redLettering,
         readerFontSize,
@@ -163,6 +177,7 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
       await supabase.from("reader_preferences").upsert({
         user_id: user.id,
         dark_mode: darkMode,
+        theme_mode: followSystemTheme ? "system" : darkMode ? "dark" : "light",
         show_verse_numbers: showVerseNumbers,
         red_lettering: redLettering,
         reader_font_size: readerFontSize,
@@ -175,6 +190,7 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
     redLettering,
     readerFontSize,
     bookmarkColor,
+    followSystemTheme,
   ]);
   const [reminderHour, setReminderHour] = useState(8);
   const [reminderMinute, setReminderMinute] = useState("00");
@@ -208,7 +224,13 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
         );
       }
       if (preferences.data) {
-        setDarkMode(preferences.data.dark_mode);
+        if (preferences.data.theme_mode === "system") {
+          setFollowSystemTheme(true);
+          setDarkModeState(deviceScheme !== "light");
+        } else {
+          setFollowSystemTheme(false);
+          setDarkModeState(preferences.data.theme_mode === "dark");
+        }
         setShowVerseNumbers(preferences.data.show_verse_numbers);
         setRedLettering(preferences.data.red_lettering);
         setReaderFontSize(preferences.data.reader_font_size);
@@ -228,7 +250,7 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
         setReminderDays(reminder.data.days);
       }
     });
-  }, [user?.id]);
+  }, [user?.id, deviceScheme]);
   useEffect(() => {
     if (user)
       supabase

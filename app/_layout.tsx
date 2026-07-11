@@ -7,11 +7,15 @@ import { useEffect } from "react";
 
 function Navigation() {
   const { darkMode } = useAppSettings();
-  const { session, loading } = useAuth();
+  const { session, loading, passwordRecovery } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   useEffect(() => {
     if (loading || process.env.EXPO_PUBLIC_E2E_BYPASS_AUTH === "true") return;
+    if (passwordRecovery && pathname !== "/update-password") {
+      router.replace("/update-password");
+      return;
+    }
     const publicRoute = [
       "/login",
       "/register",
@@ -20,7 +24,7 @@ function Navigation() {
       "/update-password",
     ].some((route) => pathname.startsWith(route));
     if (!session && !publicRoute) router.replace("/login");
-  }, [session, loading, pathname]);
+  }, [session, loading, pathname, passwordRecovery]);
   return (
     <>
       <StatusBar style={darkMode ? "light" : "dark"} />

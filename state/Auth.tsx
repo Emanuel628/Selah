@@ -12,11 +12,17 @@ import {
 } from "react";
 import { supabase } from "@/lib/supabase";
 
-type Result = { error: string | null; needsEmailVerification?: boolean };
+type Result = {
+  error: string | null;
+  code?: string;
+  needsEmailVerification?: boolean;
+};
 type AuthValue = {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  passwordRecovery: boolean;
+  clearPasswordRecovery: () => void;
   signIn: (email: string, password: string) => Promise<Result>;
   signUp: (name: string, email: string, password: string) => Promise<Result>;
   signOut: () => Promise<Result>;
@@ -28,6 +34,7 @@ const Context = createContext<AuthValue | null>(null);
 export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
   useEffect(() => {
     supabase.auth
       .getSession()
@@ -36,7 +43,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
       .finally(() => setLoading(false));
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, next) => setSession(next));
+    } = supabase.auth.onAuthStateChange((event, next) => {
+      setSession(next);
+      if (event === "PASSWORD_RECOVERY") setPasswordRecovery(true);
+    });
     return () => subscription.unsubscribe();
   }, []);
   useEffect(() => {
@@ -63,7 +73,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       email: email.trim(),
       password,
     });
-    return { error: error?.message || null };
+    return { error: error?.message || null, code: error?.code };
   }, []);
   const signUp = useCallback(
     async (name: string, email: string, password: string) => {
@@ -117,6 +127,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
       session,
       user: session?.user || null,
       loading,
+      passwordRecovery,
+      clearPasswordRecovery: () => setPasswordRecovery(false),
       signIn,
       signUp,
       signOut,
@@ -127,6 +139,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     [
       session,
       loading,
+      passwordRecovery,
       signIn,
       signUp,
       signOut,

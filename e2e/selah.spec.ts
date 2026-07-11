@@ -45,6 +45,15 @@ test("registration onboarding requires a Bible-version choice before entering Se
   await page.getByLabel("Full Name").fill("Test Reader");
   await page.getByLabel("Email Address").fill("reader@example.com");
   await page.getByLabel("Create Password").fill("Selah!2026");
+  await expect(page.getByLabel("Create Password")).toHaveAttribute(
+    "type",
+    "password",
+  );
+  await page.getByRole("checkbox", { name: "Show password" }).click();
+  await expect(page.getByLabel("Create Password")).not.toHaveAttribute(
+    "type",
+    "password",
+  );
   await expect(page.getByText("At least 8 characters")).toBeVisible();
   await page.getByText("Create Free Account").click();
   await expect(
@@ -59,6 +68,44 @@ test("registration onboarding requires a Bible-version choice before entering Se
   await expect(
     page.getByText("Genesis 1", { exact: true }).first(),
   ).toBeVisible();
+});
+
+test("login password visibility and forgot-password recovery are operational", async ({
+  page,
+}) => {
+  await page.goto("/login");
+  await page.getByLabel("Password").fill("Selah!2026");
+  await expect(page.getByLabel("Password")).toHaveAttribute("type", "password");
+  await page.getByRole("checkbox", { name: "Show password" }).click();
+  await expect(page.getByLabel("Password")).not.toHaveAttribute(
+    "type",
+    "password",
+  );
+  await page.getByText("Forgot?", { exact: true }).click();
+  await expect(
+    page.getByText("Recover your peace", { exact: true }),
+  ).toBeVisible();
+  await page.route("**/auth/v1/recover", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: "{}" }),
+  );
+  await page.getByLabel("Email Address").last().fill("reader@example.com");
+  await page.getByText("Send Reset Link", { exact: true }).click();
+  await expect(
+    page.getByText("Reset instructions sent. Check your email.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+});
+
+test("first launch follows the device light appearance", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto("/settings");
+  await expect(page.getByRole("switch").first()).not.toBeChecked();
+  const titleColor = await page
+    .getByText("Settings", { exact: true })
+    .first()
+    .evaluate((element) => getComputedStyle(element).color);
+  expect(titleColor).toBe("rgb(32, 49, 43)");
 });
 
 test("Reader navigates by page and jumps to an exact book, chapter, and page", async ({
@@ -149,7 +196,9 @@ test("Garden supports detail and create-note flows", async ({ page }) => {
   await page.getByLabel("Go back").click();
   await page.getByText("New note").click();
   await expect(page.getByText("New reflection", { exact: true })).toBeVisible();
-  await expect(page.getByLabel("Scripture reference")).toHaveValue("Genesis 1 · Page 1");
+  await expect(page.getByLabel("Scripture reference")).toHaveValue(
+    "Genesis 1 · Page 1",
+  );
   await page.getByLabel("Reflection title").fill("Creation brings order");
   await page
     .getByPlaceholder("What are you noticing?")

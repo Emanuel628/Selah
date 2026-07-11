@@ -15,7 +15,7 @@ export default function UpdatePassword() {
   const { c, s } = useAuthStyles();
   const local = useMemo(() => styles(c), [c]);
   const router = useRouter();
-  const { updatePassword } = useAuth();
+  const { updatePassword, clearPasswordRecovery } = useAuth();
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -24,7 +24,10 @@ export default function UpdatePassword() {
     const result = await updatePassword(password);
     setBusy(false);
     if (result.error) setError(result.error);
-    else router.replace("/(tabs)");
+    else {
+      clearPasswordRecovery();
+      router.replace("/login");
+    }
   };
   return (
     <AuthShell
