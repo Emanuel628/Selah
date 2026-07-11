@@ -13,11 +13,18 @@ import { Ionicons } from "@expo/vector-icons";
 import { AuthShell, useAuthStyles } from "@/components/AuthShell";
 import { AppColors } from "@/lib/theme";
 import { useAuth } from "@/state/Auth";
+import { useBiometric } from "@/state/Biometric";
 export default function Login() {
   const { c, s } = useAuthStyles();
   const local = useMemo(() => styles(c), [c]);
   const router = useRouter();
   const { signIn, resendVerification } = useAuth();
+  const {
+    enabled: biometricEnabled,
+    available: biometricAvailable,
+    saveCredentials,
+    signInWithBiometric,
+  } = useBiometric();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -44,6 +51,7 @@ export default function Login() {
       );
       return;
     }
+    await saveCredentials(email, password);
     const onboarding = await AsyncStorage.getItem("selah.pending_onboarding");
     if (onboarding)
       router.replace({
@@ -120,6 +128,22 @@ export default function Login() {
         </Pressable>
       )}
       {!!notice && <Text style={local.notice}>{notice}</Text>}
+      {biometricEnabled && biometricAvailable && (
+        <Pressable
+          accessibilityRole="button"
+          onPress={async () => {
+            setError("");
+            setNotice("");
+            const result = await signInWithBiometric();
+            if (!result.ok) setError(result.message);
+            else router.replace("/(tabs)");
+          }}
+          style={local.faceId}
+        >
+          <Ionicons name="scan-outline" size={18} color={c.green} />
+          <Text style={local.faceIdText}>Sign in with Face ID</Text>
+        </Pressable>
+      )}
       <Pressable
         disabled={!email.trim() || !password || submitting}
         onPress={submit}
@@ -159,5 +183,17 @@ const styles = (c: AppColors) =>
     resend: { minHeight: 40, justifyContent: "center", marginTop: -4 },
     resendText: { color: c.green, fontWeight: "700", fontSize: 12 },
     notice: { color: c.green, fontSize: 11, marginBottom: 8 },
+    faceId: {
+      minHeight: 44,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: c.line,
+      alignItems: "center",
+      justifyContent: "center",
+      flexDirection: "row",
+      gap: 8,
+      marginBottom: 10,
+    },
+    faceIdText: { color: c.green, fontWeight: "700", fontSize: 12 },
     disabled: { opacity: 0.45 },
   });

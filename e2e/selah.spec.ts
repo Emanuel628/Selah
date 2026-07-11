@@ -15,7 +15,7 @@ test("primary navigation exposes the approved top-level pages", async ({
   await page.getByText("Garden", { exact: true }).last().click();
   await expect(page.getByText("My Garden", { exact: true })).toBeVisible();
   await page.getByText("Search", { exact: true }).last().click();
-  await expect(page.getByText("Global Search", { exact: true })).toBeVisible();
+  await expect(page.getByText("Passage Search", { exact: true })).toBeVisible();
   await page.getByText("Settings", { exact: true }).last().click();
   await expect(page.getByText("READER SETTINGS")).toBeVisible();
 });
@@ -42,6 +42,7 @@ test("registration onboarding requires a Bible-version choice before entering Se
   page,
 }) => {
   await page.goto("/register");
+  await expect(page.getByLabel("Back to sign in")).toBeVisible();
   await page.getByLabel("Full Name").fill("Test Reader");
   await page.getByLabel("Email Address").fill("reader@example.com");
   await page.getByLabel("Create Password").fill("Selah!2026");
@@ -247,14 +248,17 @@ test("Garden supports detail and create-note flows", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("Search scopes and opens Garden results", async ({ page }) => {
+test("Search finds Bible passages by book, chapter, and page", async ({ page }) => {
   await page.goto("/search");
-  await page.getByPlaceholder("Search Scripture and your Garden").fill("chaos");
-  await expect(page.getByText("2 RESULTS")).toBeVisible();
-  await page.getByText("Garden", { exact: true }).first().click();
-  await expect(page.getByText("1 RESULTS")).toBeVisible();
-  await page.getByText("Life moving over chaos", { exact: true }).click();
-  await expect(page.getByText("CONNECTIONS")).toBeVisible();
+  await page.getByPlaceholder("Find a book or passage").fill("exo");
+  await expect(page.getByText("Exodus", { exact: true })).toBeVisible();
+  await page.getByText("Exodus", { exact: true }).click();
+  await page.getByLabel("Exodus chapter 3", { exact: true }).click();
+  await expect(page.getByText("EXODUS 3 PAGES")).toBeVisible();
+  await page.getByLabel("Exodus chapter 3 page 1", { exact: true }).click();
+  await expect(
+    page.getByText("Exodus 3", { exact: true }).first(),
+  ).toBeVisible();
 });
 
 test("Daily Reminder time is editable, saveable, and reflected in Settings", async ({
@@ -293,8 +297,25 @@ test("Reader full screen hides navigation and exits on a double tap", async ({
   const reader = page.getByLabel("Full screen Scripture. Double tap to exit.");
   await expect(reader).toBeVisible();
   await expect(page.getByText("Garden", { exact: true })).not.toBeVisible();
-  await reader.dblclick();
+  const fullscreenVerse = page
+    .getByText(/In the beginning God created the heavens and the earth/)
+    .last();
+  await fullscreenVerse.click();
+  await fullscreenVerse.click();
   await expect(page.getByLabel("Enter full screen reading")).toBeVisible();
+});
+
+test("Reader supports verse highlighting", async ({ page }) => {
+  await page.goto("/");
+  const verse = page
+    .getByText(/In the beginning God created the heavens and the earth/)
+    .last();
+  await expect(verse).toBeVisible();
+  await verse.click({ delay: 700 });
+  const highlighted = await verse.evaluate(
+    (element) => getComputedStyle(element.parentElement as HTMLElement).backgroundColor,
+  );
+  expect(highlighted).toBe("rgba(247, 215, 116, 0.38)");
 });
 
 test("Help explains the complete app flow", async ({ page }) => {
@@ -304,7 +325,17 @@ test("Help explains the complete app flow", async ({ page }) => {
   await expect(
     page.getByText("Face ID and biometrics", { exact: true }),
   ).toBeVisible();
+  await expect(page.getByText("Highlights", { exact: true })).toBeVisible();
   await expect(page.getByText("Free and Pro", { exact: true })).toBeVisible();
+});
+
+test("Settings exposes Face ID login and permanent delete account controls", async ({
+  page,
+}) => {
+  await page.goto("/settings");
+  await expect(page.getByText("Face ID Login", { exact: true })).toBeVisible();
+  await expect(page.getByText("DANGER ZONE", { exact: true })).toBeVisible();
+  await expect(page.getByText("Delete Account", { exact: true })).toBeVisible();
 });
 
 test("Sign Out returns to the approved login flow", async ({ page }) => {

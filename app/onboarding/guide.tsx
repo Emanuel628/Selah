@@ -19,7 +19,7 @@ const steps = [
   [
     "leaf-outline",
     "Grow your Garden",
-    "Search, filter, edit, and reconnect your reflections. Thought Groups describe the kind of insight; tags describe its subject.",
+    "Filter, edit, and reconnect your reflections in Garden. Use Search when you want to jump directly to a Bible book, chapter, and page.",
   ],
   [
     "notifications-outline",

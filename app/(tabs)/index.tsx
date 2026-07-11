@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  GestureResponderEvent,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,10 +18,20 @@ import { useAppSettings } from "@/state/AppSettings";
 import { useThemeColors } from "@/state/useThemeColors";
 import { BibleChapter, getChapter, passageFromApiLink } from "@/lib/bibleApi";
 import { paginateVerses } from "@/lib/readerPagination";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/state/Auth";
+
+type Highlight = {
+  id?: string;
+  verse_start: number;
+  verse_end: number;
+  color: string;
+};
 
 export default function Read() {
   const router = useRouter();
   const settings = useAppSettings();
+  const { user } = useAuth();
   const { width, height } = useWindowDimensions();
   const {
     showVerseNumbers,
@@ -43,6 +55,17 @@ export default function Read() {
   const [error, setError] = useState("");
   const [reload, setReload] = useState(0);
   const [openLastPage, setOpenLastPage] = useState(false);
+  const [highlights, setHighlights] = useState<Highlight[]>([]);
+  const [activeHighlight, setActiveHighlight] = useState<{
+    start: number;
+    end: number;
+  } | null>(null);
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const lastTap = useRef(0);
+  const verseLayouts = useRef<Record<number, { y: number; height: number }>>(
+    {},
+  );
   useEffect(() => {
     const controller = new AbortController();
     setChapter(null);
@@ -70,6 +93,22 @@ export default function Read() {
       });
     return () => controller.abort();
   }, [preferredTranslationId, currentBookId, currentChapter, reload]);
+  useEffect(() => {
+    if (!user) {
+      setHighlights([]);
+      return;
+    }
+    supabase
+      .from("scripture_highlights")
+      .select("id,verse_start,verse_end,color,page")
+      .eq("user_id", user.id)
+      .eq("translation_id", preferredTranslationId)
+      .eq("book_id", currentBookId)
+      .eq("chapter", currentChapter)
+      .then(({ data }) => {
+        setHighlights((data || []).filter((item) => item.page === currentPage));
+      });
+  }, [user?.id, preferredTranslationId, currentBookId, currentChapter, currentPage]);
   const pages = useMemo(
     () =>
       chapter
@@ -103,6 +142,74 @@ export default function Read() {
     if (currentPage < pages.length) setCurrentPage(currentPage + 1);
     else moveChapter(chapter?.nextChapterApiLink || null, "first");
   };
+  const startHighlight = (verse: number) => {
+    setActiveHighlight({ start: verse, end: verse });
+  };
+  const moveHighlight = (event: GestureResponderEvent) => {
+    if (!activeHighlight) return;
+    const y = event.nativeEvent.locationY;
+    const match = Object.entries(verseLayouts.current).find(([, layout]) => {
+      return y >= layout.y && y <= layout.y + layout.height;
+    });
+    if (match) {
+      const verse = Number(match[0]);
+      setActiveHighlight((current) =>
+        current ? { ...current, end: verse } : current,
+      );
+    }
+  };
+  const finishHighlight = async () => {
+    if (!activeHighlight || !user) {
+      setActiveHighlight(null);
+      return;
+    }
+    const verse_start = Math.min(activeHighlight.start, activeHighlight.end);
+    const verse_end = Math.max(activeHighlight.start, activeHighlight.end);
+    const payload = {
+      user_id: user.id,
+      translation_id: preferredTranslationId,
+      book_id: currentBookId,
+      book_name: currentBookName,
+      chapter: currentChapter,
+      page: currentPage,
+      verse_start,
+      verse_end,
+      color: "#F7D774",
+    };
+    setHighlights((items) => [...items, payload]);
+    setActiveHighlight(null);
+    await supabase.from("scripture_highlights").insert(payload);
+  };
+  const onTouchStart = (event: GestureResponderEvent) => {
+    touchStartX.current = event.nativeEvent.pageX;
+    touchStartY.current = event.nativeEvent.pageY;
+  };
+  const handleFullscreenTap = () => {
+    const now = Date.now();
+    if (now - lastTap.current < 350) setReaderFullscreen(false);
+    lastTap.current = now;
+  };
+  const onTouchEnd = (event: GestureResponderEvent) => {
+    if (activeHighlight) {
+      void finishHighlight();
+      return;
+    }
+    const dx = event.nativeEvent.pageX - touchStartX.current;
+    const dy = event.nativeEvent.pageY - touchStartY.current;
+    if (Math.abs(dx) < 55 || Math.abs(dx) < Math.abs(dy) * 1.4) {
+      if (readerFullscreen) handleFullscreenTap();
+      return;
+    }
+    if (dx < 0) next();
+    else previous();
+  };
+  const isHighlighted = (verse: number) =>
+    highlights.some(
+      (item) => verse >= item.verse_start && verse <= item.verse_end,
+    ) ||
+    (activeHighlight &&
+      verse >= Math.min(activeHighlight.start, activeHighlight.end) &&
+      verse <= Math.max(activeHighlight.start, activeHighlight.end));
   const isBookmarked =
     bookmark?.bookId === currentBookId &&
     bookmark.chapter === currentChapter &&
@@ -116,26 +223,36 @@ export default function Read() {
     );
     setTimeout(() => setCurrentPage(bookmark.page), 0);
   };
-  const lastTap = useRef(0);
-  const handleFullscreenTap = () => {
-    const now = Date.now();
-    if (now - lastTap.current < 350) setReaderFullscreen(false);
-    lastTap.current = now;
-  };
   if (readerFullscreen && chapter)
     return (
-      <Pressable
+      <View
         accessibilityLabel="Full screen Scripture. Double tap to exit."
-        onPress={handleFullscreenTap}
         style={s.fullscreen}
+        {...(Platform.OS === "web"
+          ? ({ onDoubleClick: () => setReaderFullscreen(false) } as object)
+          : {})}
       >
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={s.fullscreenBody}
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
+          onTouchMove={moveHighlight}
+          {...(Platform.OS === "web"
+            ? ({ onDoubleClick: () => setReaderFullscreen(false) } as object)
+            : {})}
         >
           {(pages[currentPage - 1] || pages[0] || []).map((verse) => (
-            <Text
+            <Pressable
               key={verse.number}
+              onPress={handleFullscreenTap}
+              onLongPress={() => startHighlight(verse.number)}
+              onLayout={(event) => {
+                verseLayouts.current[verse.number] = event.nativeEvent.layout;
+              }}
+              style={isHighlighted(verse.number) ? s.highlighted : null}
+            >
+              <Text
               style={[
                 s.verse,
                 {
@@ -147,10 +264,11 @@ export default function Read() {
             >
               {showVerseNumbers && <Text style={s.num}>{verse.number} </Text>}
               {verse.text}
-            </Text>
+              </Text>
+            </Pressable>
           ))}
         </ScrollView>
-      </Pressable>
+      </View>
     );
   return (
     <Screen title="Read">
@@ -236,13 +354,23 @@ export default function Read() {
             key={`${currentBookId}-${currentChapter}-${currentPage}`}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={s.body}
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
+            onTouchMove={moveHighlight}
           >
             <Text style={s.section}>
               {chapter.headings[0]?.toUpperCase() || "SCRIPTURE"}
             </Text>
             {(pages[currentPage - 1] || pages[0] || []).map((verse) => (
-              <Text
+              <Pressable
                 key={verse.number}
+                onLongPress={() => startHighlight(verse.number)}
+                onLayout={(event) => {
+                  verseLayouts.current[verse.number] = event.nativeEvent.layout;
+                }}
+                style={isHighlighted(verse.number) ? s.highlighted : null}
+              >
+                <Text
                 style={[
                   s.verse,
                   {
@@ -254,7 +382,8 @@ export default function Read() {
               >
                 {showVerseNumbers && <Text style={s.num}>{verse.number} </Text>}
                 {verse.text}
-              </Text>
+                </Text>
+              </Pressable>
             ))}
             <Text style={s.source}>
               Scripture: {chapter.translation.englishName}
@@ -360,6 +489,11 @@ const styles = (c: AppColors) =>
       marginBottom: 20,
     },
     verse: { fontFamily: "serif", marginBottom: 17, color: c.text },
+    highlighted: {
+      backgroundColor: "rgba(247, 215, 116, 0.38)",
+      borderRadius: 6,
+      paddingHorizontal: 4,
+    },
     redLetter: { color: c.redLetter },
     num: { color: c.gold, fontSize: 11, fontWeight: "700" },
     source: { color: c.muted, fontSize: 9, textAlign: "center", marginTop: 12 },

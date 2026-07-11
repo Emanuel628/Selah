@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as LocalAuthentication from "expo-local-authentication";
+import * as SecureStore from "expo-secure-store";
 import {
   createContext,
   PropsWithChildren,
@@ -9,24 +10,39 @@ import {
   useMemo,
   useState,
 } from "react";
-import { AppState, Platform } from "react-native";
+import { Platform } from "react-native";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/state/Auth";
 type Value = {
   enabled: boolean;
   available: boolean;
-  locked: boolean;
   checking: boolean;
   enable: (value: boolean) => Promise<{ ok: boolean; message: string }>;
-  unlock: () => Promise<boolean>;
+  saveCredentials: (email: string, password: string) => Promise<void>;
+  signInWithBiometric: () => Promise<{ ok: boolean; message: string }>;
 };
 const Context = createContext<Value | null>(null);
 const KEY = "selah.biometric.enabled";
+const EMAIL_KEY = "selah.biometric.email";
+const PASSWORD_KEY = "selah.biometric.password";
+
+const secureSet = async (key: string, value: string) => {
+  if (Platform.OS === "web") await AsyncStorage.setItem(key, value);
+  else await SecureStore.setItemAsync(key, value);
+};
+const secureGet = async (key: string) =>
+  Platform.OS === "web"
+    ? AsyncStorage.getItem(key)
+    : SecureStore.getItemAsync(key);
+const secureDelete = async (key: string) => {
+  if (Platform.OS === "web") await AsyncStorage.removeItem(key);
+  else await SecureStore.deleteItemAsync(key);
+};
+
 export function BiometricProvider({ children }: PropsWithChildren) {
   const { user } = useAuth();
   const [enabled, setEnabled] = useState(false);
   const [available, setAvailable] = useState(false);
-  const [locked, setLocked] = useState(false);
   const [checking, setChecking] = useState(true);
   useEffect(() => {
     Promise.all([
@@ -39,7 +55,6 @@ export function BiometricProvider({ children }: PropsWithChildren) {
         setAvailable(supported);
         const active = supported && stored === "1";
         setEnabled(active);
-        setLocked(active && !!user);
       })
       .finally(() => setChecking(false));
   }, [user?.id]);
@@ -53,36 +68,60 @@ export function BiometricProvider({ children }: PropsWithChildren) {
       .then(({ data }) => {
         if (data?.biometric_enabled && available) {
           setEnabled(true);
-          setLocked(true);
         }
       });
   }, [user?.id, available]);
-  useEffect(() => {
-    if (Platform.OS === "web") return;
-    const sub = AppState.addEventListener("change", (state) => {
-      if (state !== "active" && enabled && user) setLocked(true);
-    });
-    return () => sub.remove();
-  }, [enabled, user]);
-  const unlock = useCallback(async () => {
-    if (!enabled) {
-      setLocked(false);
-      return true;
-    }
+  const saveCredentials = useCallback(
+    async (email: string, password: string) => {
+      if (!enabled || !email.trim() || !password) return;
+      await secureSet(EMAIL_KEY, email.trim());
+      await secureSet(PASSWORD_KEY, password);
+    },
+    [enabled],
+  );
+  const signInWithBiometric = useCallback(async () => {
+    if (!enabled)
+      return { ok: false, message: "Face ID login is not enabled." };
+    if (!available)
+      return {
+        ok: false,
+        message: "Face ID is not available on this device.",
+      };
+    const email = await secureGet(EMAIL_KEY);
+    if (!email)
+      return {
+        ok: false,
+        message: "Sign in with your password once to set up Face ID login.",
+      };
     const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: "Unlock Selah",
+      promptMessage: "Sign in to Selah",
       cancelLabel: "Use password",
       disableDeviceFallback: false,
     });
-    if (result.success) setLocked(false);
-    return result.success;
-  }, [enabled]);
+    if (!result.success)
+      return { ok: false, message: "Face ID sign-in was cancelled." };
+    const password = await secureGet(PASSWORD_KEY);
+    if (!password)
+      return {
+        ok: false,
+        message: "Sign in with your password once to set up Face ID login.",
+      };
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    return {
+      ok: !error,
+      message: error?.message || "Signed in with Face ID.",
+    };
+  }, [available, enabled]);
   const enable = useCallback(
     async (value: boolean) => {
       if (!value) {
         setEnabled(false);
-        setLocked(false);
         await AsyncStorage.setItem(KEY, "0");
+        await secureDelete(EMAIL_KEY);
+        await secureDelete(PASSWORD_KEY);
         if (user)
           await supabase
             .from("profiles")
@@ -91,7 +130,7 @@ export function BiometricProvider({ children }: PropsWithChildren) {
               biometric_onboarding_completed: true,
             })
             .eq("id", user.id);
-        return { ok: true, message: "Biometric lock is off." };
+        return { ok: true, message: "Face ID login is off." };
       }
       if (!available)
         return {
@@ -118,13 +157,30 @@ export function BiometricProvider({ children }: PropsWithChildren) {
             biometric_onboarding_completed: true,
           })
           .eq("id", user.id);
-      return { ok: true, message: "Face ID is enabled." };
+      return {
+        ok: true,
+        message: "Face ID login is enabled. Use your password once to save it securely.",
+      };
     },
     [available, user],
   );
   const value = useMemo(
-    () => ({ enabled, available, locked, checking, enable, unlock }),
-    [enabled, available, locked, checking, enable, unlock],
+    () => ({
+      enabled,
+      available,
+      checking,
+      enable,
+      saveCredentials,
+      signInWithBiometric,
+    }),
+    [
+      enabled,
+      available,
+      checking,
+      enable,
+      saveCredentials,
+      signInWithBiometric,
+    ],
   );
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }

@@ -7,15 +7,19 @@ import { useThemeColors } from "@/state/useThemeColors";
 const sections = [
   [
     "Read Scripture",
-    "Use the Read tab to open your current passage. Tap the passage title to choose an exact book, chapter, and page. Previous page and Next page move through the chapter and continue into the adjacent chapter at an edge.",
+    "Use the Read tab to open your current passage. Tap the passage title to choose an exact book, chapter, and page. Swipe left for the next page or swipe right for the previous page. The Previous page and Next page buttons do the same thing.",
   ],
   [
     "Full-screen reading",
-    "Tap the expand icon on the Reader to hide navigation and show only Scripture. Double-tap anywhere on the reading screen to exit full screen.",
+    "Tap the expand icon on the Reader to hide navigation and show only Scripture. You can still scroll vertically and swipe left or right to change pages. Double-tap anywhere on the reading screen to exit full screen.",
   ],
   [
     "Bible version and text",
     "Choose your Bible version during setup or in Settings. Text Size, verse numbers, and red lettering are under Reading Preferences. Red lettering appears only when the selected translation supplies words-of-Jesus metadata.",
+  ],
+  [
+    "Highlights",
+    "Long-press a verse to begin a highlight. Keep your finger down and drag through the verses you want included, then lift your finger to save the highlight to that Scripture location.",
   ],
   [
     "Bookmarks",
@@ -27,7 +31,7 @@ const sections = [
   ],
   [
     "Find a reflection",
-    "Use Garden filters to narrow notes by thought group, tags, Scripture book, or date. Search looks across Scripture and your Garden; select a result to open it.",
+    "Use Garden filters to narrow notes by thought group, tags, Scripture book, or date. The Search tab is for finding a Bible passage by book, chapter, and page.",
   ],
   [
     "Study reminders",
@@ -35,11 +39,11 @@ const sections = [
   ],
   [
     "Face ID and biometrics",
-    "During setup, you can protect your signed-in session with Face ID or your device biometric. Change this in Settings. Selah never stores biometric data or your password; verification is handled by the device.",
+    "During setup or in Settings, you can enable Face ID login. After one normal password sign-in, Selah saves the login securely on this device so Face ID can sign you in next time. Selah does not add a second lock after you are already signed in.",
   ],
   [
     "Appearance and account",
-    "Selah follows the device appearance by default. Choosing an appearance in Settings saves it to your account. Sign Out ends the session. Forgot Password emails a secure reset link.",
+    "Selah follows the device appearance by default. Choosing an appearance in Settings saves it to your account. Sign Out ends the session. Forgot Password emails a secure reset link. Delete Account permanently removes your account after subscription checks pass.",
   ],
   [
     "Free and Pro",

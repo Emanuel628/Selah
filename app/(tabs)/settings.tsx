@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Pressable,
+  Alert,
   ScrollView,
   StyleSheet,
   Switch,
@@ -97,6 +98,10 @@ export default function Settings() {
   const [biometricMessage, setBiometricMessage] = useState("");
   const { signOut, user } = useAuth();
   const [subscriptionDetail, setSubscriptionDetail] = useState("Free");
+  const [subscriptionTier, setSubscriptionTier] = useState<"free" | "pro">(
+    "free",
+  );
+  const [deleting, setDeleting] = useState(false);
   useEffect(() => {
     if (!user) return;
     supabase
@@ -105,7 +110,9 @@ export default function Settings() {
       .eq("id", user.id)
       .maybeSingle()
       .then(({ data }) => {
-        if (!data || data.subscription_tier !== "pro") return;
+        if (!data) return;
+        setSubscriptionTier(data.subscription_tier || "free");
+        if (data.subscription_tier !== "pro") return;
         const end = data.trial_ends_at ? new Date(data.trial_ends_at) : null;
         const days = end
           ? Math.max(0, Math.ceil((end.getTime() - Date.now()) / 86400000))
@@ -115,6 +122,61 @@ export default function Settings() {
         );
       });
   }, [user?.id]);
+  const cancelSubscription = async () => {
+    const { error } = await supabase.functions.invoke("cancel-subscription");
+    if (error) {
+      Alert.alert("Could not cancel", error.message);
+      return;
+    }
+    setSubscriptionTier("free");
+    setSubscriptionDetail("Free");
+    Alert.alert(
+      "Subscription cancelled",
+      "Your Pro access has been cancelled. A confirmation email will be sent if email delivery is configured.",
+    );
+  };
+  const deleteAccount = async () => {
+    if (deleting) return;
+    if (subscriptionTier === "pro") {
+      Alert.alert(
+        "Cancel Pro before deleting",
+        "Cancel your Pro subscription before permanently deleting this account.",
+        [
+          { text: "Keep Account", style: "cancel" },
+          {
+            text: "Cancel Subscription",
+            style: "destructive",
+            onPress: cancelSubscription,
+          },
+        ],
+      );
+      return;
+    }
+    Alert.alert(
+      "Delete account permanently?",
+      "This removes your login, settings, bookmarks, reminders, highlights, and Garden reflections. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete Account",
+          style: "destructive",
+          onPress: async () => {
+            setDeleting(true);
+            const { error } = await supabase.functions.invoke(
+              "delete-account",
+            );
+            setDeleting(false);
+            if (error) {
+              Alert.alert("Could not delete account", error.message);
+              return;
+            }
+            await signOut();
+            router.replace("/login");
+          },
+        },
+      ],
+    );
+  };
   const row = (props: any) => <Setting {...props} c={c} s={s} />;
   return (
     <Screen title="Settings">
@@ -181,7 +243,7 @@ export default function Settings() {
         <View style={s.group}>
           {row({
             icon: "finger-print-outline",
-            name: "Biometric Lock",
+            name: "Face ID Login",
             value: biometric,
             onChange: async (value: boolean) => {
               const result = await setBiometric(value);
@@ -208,6 +270,17 @@ export default function Settings() {
             name: "Help & How to Use Selah",
             detail: "Guide",
             onPress: () => router.push("/help"),
+            last: true,
+          })}
+        </View>
+        <Text style={s.label}>DANGER ZONE</Text>
+        <View style={s.group}>
+          {row({
+            icon: "trash-outline",
+            name: deleting ? "Deleting Account..." : "Delete Account",
+            detail: "Permanent",
+            detailColor: c.danger,
+            onPress: deleteAccount,
             last: true,
           })}
         </View>

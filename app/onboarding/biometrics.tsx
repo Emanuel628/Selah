@@ -33,20 +33,20 @@ export default function BiometricOnboarding() {
     next();
   };
   return (
-    <DetailScreen title="Protect your Garden">
+    <DetailScreen title="Face ID Login">
       <View style={s.body}>
         <View style={s.icon}>
           <Ionicons name="scan-outline" size={52} color={c.green} />
         </View>
         <Text style={s.title}>
           {available
-            ? "Use Face ID to unlock Selah?"
+            ? "Use Face ID to sign in?"
             : "Device biometrics unavailable"}
         </Text>
         <Text style={s.copy}>
           {available
-            ? "Face ID adds a private lock when Selah opens or returns from the background. Your Supabase password is still your account credential."
-            : "You can continue now and enable biometric lock later from Settings after Face ID or device biometrics are enrolled."}
+            ? "After you sign in with your password once, Selah can save those credentials securely on this device and let Face ID sign you in next time."
+            : "You can continue now and enable Face ID login later from Settings after Face ID or device biometrics are enrolled."}
         </Text>
         {!!message && <Text style={s.message}>{message}</Text>}
         <Pressable

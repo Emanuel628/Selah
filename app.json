@@ -13,10 +13,11 @@
       [
         "expo-local-authentication",
         {
-          "faceIDPermission": "Allow Selah to use Face ID to unlock your Scripture Garden."
+          "faceIDPermission": "Allow Selah to use Face ID to sign in to your account."
         }
       ],
-      "./plugins/with-local-notifications"
+      "./plugins/with-local-notifications",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true

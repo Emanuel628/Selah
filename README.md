@@ -25,7 +25,7 @@ features can use those relationships to surface connections across passages.
 - Reading: Multi-Translation Engine, Themes, Font Scaling, Red Letter
 - Garden: Insight Entries, Knowledge Graph
 - Pro: Multi-device Sync, Lexicon, Priority Search
-- Settings: Biometric Lock
+- Settings: Face ID Login
 - Engagement: Study Reminders
 
 ## Scripture Provider
@@ -52,8 +52,9 @@ switch appearances from Settings → Dark Mode.
 ## Remaining
 - Full-Scripture search
 - Production subscription billing and entitlements
-- Native notification scheduling
 - Cross-reference engine
+- Email provider keys for account/subscription confirmation emails
+- Pro synthesis features that turn Garden reflections into guided insight
 
 ## Technical Architecture
 - Contextual Anchoring
@@ -85,7 +86,11 @@ security so authenticated users can only access their own records.
 
 ## Next Milestone
 Validate native email deep links and notification permissions on physical iOS
-and Android devices, then add production subscription billing.
+and Android devices, then add production subscription billing. Later, configure
+email delivery secrets for Supabase Edge Functions:
+
+- `RESEND_API_KEY`
+- `ACCOUNT_EMAIL_FROM`
 
 ## Run the frontend
 

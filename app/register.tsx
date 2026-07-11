@@ -50,6 +50,14 @@ export default function Register() {
       title="Begin your garden"
       subtitle="A distraction-free home for scriptural study."
     >
+      <Pressable
+        accessibilityLabel="Back to sign in"
+        onPress={() => router.replace("/login")}
+        style={local.back}
+      >
+        <Ionicons name="arrow-back" size={17} color={c.green} />
+        <Text style={local.backText}>Back to sign in</Text>
+      </Pressable>
       <Text style={s.label}>Full Name</Text>
       <TextInput
         accessibilityLabel="Full Name"
@@ -157,4 +165,14 @@ const styles = (c: AppColors) =>
       marginBottom: 8,
     },
     showText: { color: c.text, fontSize: 12 },
+    back: {
+      minHeight: 40,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 7,
+      alignSelf: "flex-start",
+      marginTop: -8,
+      marginBottom: 8,
+    },
+    backText: { color: c.green, fontWeight: "700", fontSize: 12 },
   });
