@@ -18,7 +18,6 @@ import { useAppSettings } from "@/state/AppSettings";
 import { useThemeColors } from "@/state/useThemeColors";
 import { useAuth } from "@/state/Auth";
 import { supabase } from "@/lib/supabase";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function BibleVersion() {
   const router = useRouter();
@@ -74,13 +73,7 @@ export default function BibleVersion() {
     if (onboarding !== "1") router.back();
   };
   const finish = async () => {
-    if (user)
-      await supabase
-        .from("profiles")
-        .update({ onboarding_completed: true })
-        .eq("id", user.id);
-    await AsyncStorage.removeItem("selah.pending_onboarding");
-    router.replace("/(tabs)");
+    router.replace("/onboarding/biometrics");
   };
   return (
     <DetailScreen

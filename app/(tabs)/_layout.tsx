@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppColors } from "@/lib/theme";
 import { useThemeColors } from "@/state/useThemeColors";
+import { useAppSettings } from "@/state/AppSettings";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 const icons: Record<string, IconName> = {
@@ -15,6 +16,7 @@ const icons: Record<string, IconName> = {
 };
 export default function Layout() {
   const c = useThemeColors();
+  const { readerFullscreen } = useAppSettings();
   const insets = useSafeAreaInsets();
   const s = useMemo(() => styles(c, insets.bottom), [c, insets.bottom]);
   return (
@@ -24,7 +26,7 @@ export default function Layout() {
           screenOptions={({ route }) => ({
             headerShown: false,
             sceneStyle: { backgroundColor: c.bg },
-            tabBarStyle: s.tabBar,
+            tabBarStyle: readerFullscreen ? { display: "none" } : s.tabBar,
             tabBarItemStyle: s.tabItem,
             tabBarLabelStyle: s.tabLabel,
             tabBarActiveTintColor: c.green,

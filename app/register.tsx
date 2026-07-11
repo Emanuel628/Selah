@@ -32,7 +32,7 @@ export default function Register() {
   const submit = async () => {
     if (!valid || submitting) return;
     if (process.env.EXPO_PUBLIC_E2E_BYPASS_AUTH === "true") {
-      router.push({ pathname: "/bible-version", params: { onboarding: "1" } });
+      router.push("/onboarding/account-created");
       return;
     }
     setSubmitting(true);
@@ -43,11 +43,7 @@ export default function Register() {
       setError(result.error);
       return;
     }
-    router.replace(
-      result.needsEmailVerification
-        ? { pathname: "/auth-verify", params: { email: email.trim() } }
-        : { pathname: "/bible-version", params: { onboarding: "1" } },
-    );
+    router.replace("/onboarding/account-created");
   };
   return (
     <AuthShell

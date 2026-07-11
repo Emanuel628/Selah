@@ -56,6 +56,8 @@ test("registration onboarding requires a Bible-version choice before entering Se
   );
   await expect(page.getByText("At least 8 characters")).toBeVisible();
   await page.getByText("Create Free Account").click();
+  await expect(page.getByText("Account created successfully")).toBeVisible();
+  await page.getByText("Personalize Selah").click();
   await expect(
     page.getByText("Choose the version you want to read"),
   ).toBeVisible();
@@ -65,6 +67,11 @@ test("registration onboarding requires a Bible-version choice before entering Se
   await page.getByText("King James Version", { exact: true }).click();
   await expect(page.getByText("Continue with KJAV")).toBeVisible();
   await page.getByText("Continue with KJAV").click();
+  await page.getByText("Not now").click();
+  await expect(page.getByText("How Selah works")).toBeVisible();
+  await page.getByText("See account options").click();
+  await expect(page.getByText("Choose your Selah")).toBeVisible();
+  await page.getByText("Continue with Free").click();
   await expect(
     page.getByText("Genesis 1", { exact: true }).first(),
   ).toBeVisible();
@@ -181,12 +188,35 @@ test("light mode applies the parchment theme across navigation and settings", as
     .first()
     .evaluate((element) => getComputedStyle(element).color);
   expect(titleColor).toBe("rgb(32, 49, 43)");
+  await page.reload();
+  await expect(page.getByRole("switch").first()).not.toBeChecked();
   await page.getByText("Read", { exact: true }).last().click();
   await expect(
     page
       .getByText(/In the beginning God created the heavens and the earth/)
       .last(),
   ).toBeVisible();
+});
+
+test("red lettering is applied when the Bible version provides Jesus-word metadata", async ({
+  page,
+}) => {
+  await page.goto("/settings");
+  await page.getByText("Bible Version").click();
+  await page
+    .getByPlaceholder("Search English versions")
+    .fill("World English Bible");
+  await page.getByText("World English Bible", { exact: true }).click();
+  await page.getByText("Read", { exact: true }).last().click();
+  await page.getByLabel("Choose book and chapter").click();
+  await page.getByText("Matthew", { exact: true }).click();
+  await page.getByLabel("Matthew chapter 5", { exact: true }).click();
+  await page.getByLabel("Matthew chapter 5 page 1", { exact: true }).click();
+  const words = page.getByText(/Blessed are the poor in spirit/).last();
+  await expect(words).toBeVisible();
+  expect(
+    await words.evaluate((element) => getComputedStyle(element).color),
+  ).toBe("rgb(214, 111, 104)");
 });
 
 test("Garden supports detail and create-note flows", async ({ page }) => {
@@ -235,10 +265,46 @@ test("Daily Reminder time is editable, saveable, and reflected in Settings", asy
   await page.getByLabel("Increase minutes").click();
   await page.getByText("PM", { exact: true }).click();
   await page.getByText("Save study rhythm").click();
-  await expect(page.getByText("Saved ✓")).toBeVisible();
-  await expect(page.getByText("Reminder saved for 8:05 PM.")).toBeVisible();
+  await expect(
+    page.getByText("Saved. Selah will remind you at 8:05 PM."),
+  ).toBeVisible();
   await page.getByLabel("Go back").click();
   await expect(page.getByText("8:05 PM")).toBeVisible();
+});
+
+test("Daily Reminders cannot be saved while off", async ({ page }) => {
+  await page.goto("/reminders");
+  const toggle = page.getByLabel("Enable daily reminders");
+  if (await toggle.isChecked()) await toggle.click();
+  await expect(page.getByLabel("Save study rhythm")).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  );
+  await expect(
+    page.getByText(/scheduled notifications were cancelled/),
+  ).toBeVisible();
+});
+
+test("Reader full screen hides navigation and exits on a double tap", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByLabel("Enter full screen reading").click();
+  const reader = page.getByLabel("Full screen Scripture. Double tap to exit.");
+  await expect(reader).toBeVisible();
+  await expect(page.getByText("Garden", { exact: true })).not.toBeVisible();
+  await reader.dblclick();
+  await expect(page.getByLabel("Enter full screen reading")).toBeVisible();
+});
+
+test("Help explains the complete app flow", async ({ page }) => {
+  await page.goto("/settings");
+  await page.getByText("Help & How to Use Selah").click();
+  await expect(page.getByText("Read Scripture", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Face ID and biometrics", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Free and Pro", { exact: true })).toBeVisible();
 });
 
 test("Sign Out returns to the approved login flow", async ({ page }) => {

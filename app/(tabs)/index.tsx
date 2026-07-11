@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -34,6 +34,8 @@ export default function Read() {
     bookmarkColor,
     bookmark,
     saveBookmark,
+    readerFullscreen,
+    setReaderFullscreen,
   } = settings;
   const c = useThemeColors();
   const s = useMemo(() => styles(c), [c]);
@@ -114,6 +116,42 @@ export default function Read() {
     );
     setTimeout(() => setCurrentPage(bookmark.page), 0);
   };
+  const lastTap = useRef(0);
+  const handleFullscreenTap = () => {
+    const now = Date.now();
+    if (now - lastTap.current < 350) setReaderFullscreen(false);
+    lastTap.current = now;
+  };
+  if (readerFullscreen && chapter)
+    return (
+      <Pressable
+        accessibilityLabel="Full screen Scripture. Double tap to exit."
+        onPress={handleFullscreenTap}
+        style={s.fullscreen}
+      >
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={s.fullscreenBody}
+        >
+          {(pages[currentPage - 1] || pages[0] || []).map((verse) => (
+            <Text
+              key={verse.number}
+              style={[
+                s.verse,
+                {
+                  fontSize: readerFontSize,
+                  lineHeight: Math.round(readerFontSize * 1.65),
+                },
+                redLettering && verse.hasWordsOfJesus && s.redLetter,
+              ]}
+            >
+              {showVerseNumbers && <Text style={s.num}>{verse.number} </Text>}
+              {verse.text}
+            </Text>
+          ))}
+        </ScrollView>
+      </Pressable>
+    );
   return (
     <Screen title="Read">
       <View style={s.location}>
@@ -131,6 +169,13 @@ export default function Read() {
             </Text>
           </View>
           <Ionicons name="chevron-down" size={18} color={c.muted} />
+        </Pressable>
+        <Pressable
+          accessibilityLabel="Enter full screen reading"
+          onPress={() => setReaderFullscreen(true)}
+          style={s.iconButton}
+        >
+          <Ionicons name="expand-outline" size={20} color={c.muted} />
         </Pressable>
         <Pressable
           accessibilityLabel={
@@ -271,6 +316,12 @@ const styles = (c: AppColors) =>
       backgroundColor: c.surface,
       alignItems: "center",
       justifyContent: "center",
+    },
+    fullscreen: { flex: 1, backgroundColor: c.bg },
+    fullscreenBody: {
+      paddingHorizontal: 24,
+      paddingTop: 56,
+      paddingBottom: 50,
     },
     bookmarkBanner: {
       minHeight: 44,

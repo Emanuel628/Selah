@@ -7,7 +7,17 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "icon": "./assets/icon.png",
-    "plugins": ["expo-router", "@react-native-community/datetimepicker"],
+    "plugins": [
+      "expo-router",
+      "@react-native-community/datetimepicker",
+      "expo-notifications",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow Selah to use Face ID to unlock your Scripture Garden."
+        }
+      ]
+    ],
     "experiments": {
       "typedRoutes": true
     },

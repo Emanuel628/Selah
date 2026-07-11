@@ -1,3 +1,123 @@
-import { useMemo } from 'react'; import { Pressable, StyleSheet, Text, View } from 'react-native'; import { Ionicons } from '@expo/vector-icons'; import { AppColors } from '@/lib/theme'; import { useThemeColors } from '@/state/useThemeColors';
-export function ReminderTimePicker({hour,minute,period,disabled,onChange}:{hour:number;minute:string;period:'AM'|'PM';disabled?:boolean;onChange:(h:number,m:string,p:'AM'|'PM')=>void}){const c=useThemeColors();const s=useMemo(()=>styles(c),[c]);const adjustHour=(d:number)=>onChange(((hour-1+d+12)%12)+1,minute,period);const adjustMinute=(d:number)=>{let total=Number(minute)+d,nextHour=hour;if(total<0){total=55;nextHour=((hour-2+12)%12)+1}else if(total>59){total=0;nextHour=(hour%12)+1}onChange(nextHour,String(total).padStart(2,'0'),period)};const control=(label:string,onPress:()=>void,icon:'remove'|'add')=><Pressable disabled={disabled} accessibilityLabel={label} onPress={onPress} style={s.control}><Ionicons name={icon} size={25} color={c.green}/></Pressable>;return <View style={[s.card,disabled&&s.disabled]}><View style={s.column}>{control('Decrease hour',()=>adjustHour(-1),'remove')}<Text style={s.value}>{hour}</Text>{control('Increase hour',()=>adjustHour(1),'add')}</View><Text style={s.colon}>:</Text><View style={s.column}>{control('Decrease minutes',()=>adjustMinute(-5),'remove')}<Text style={s.value}>{minute}</Text>{control('Increase minutes',()=>adjustMinute(5),'add')}</View><View style={s.period}>{(['AM','PM'] as const).map(item=><Pressable key={item} onPress={()=>onChange(hour,minute,item)} style={[s.periodButton,period===item&&s.selected]}><Text style={[s.periodText,period===item&&s.selectedText]}>{item}</Text></Pressable>)}</View></View>}
-const styles=(c:AppColors)=>StyleSheet.create({card:{backgroundColor:c.surface,borderRadius:16,borderWidth:1,borderColor:c.line,padding:14,flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,marginBottom:22},disabled:{opacity:.4},column:{alignItems:'center'},control:{width:52,height:44,borderRadius:12,backgroundColor:c.surfaceRaised,alignItems:'center',justifyContent:'center'},value:{color:c.text,fontSize:30,fontWeight:'700',minWidth:54,textAlign:'center',paddingVertical:5},colon:{color:c.text,fontSize:28,fontWeight:'700'},period:{gap:8,marginLeft:8},periodButton:{minWidth:58,minHeight:48,borderRadius:11,backgroundColor:c.surfaceRaised,alignItems:'center',justifyContent:'center'},selected:{backgroundColor:c.green},periodText:{color:c.muted,fontWeight:'700'},selectedText:{color:c.onAccent}});
+import { useMemo } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { AppColors } from "@/lib/theme";
+import { useThemeColors } from "@/state/useThemeColors";
+export function ReminderTimePicker({
+  hour,
+  minute,
+  period,
+  disabled,
+  onChange,
+}: {
+  hour: number;
+  minute: string;
+  period: "AM" | "PM";
+  disabled?: boolean;
+  onChange: (h: number, m: string, p: "AM" | "PM") => void;
+}) {
+  const c = useThemeColors();
+  const s = useMemo(() => styles(c), [c]);
+  const adjustHour = (d: number) =>
+    onChange(((hour - 1 + d + 12) % 12) + 1, minute, period);
+  const adjustMinute = (d: number) => {
+    let total = Number(minute) + d,
+      nextHour = hour;
+    if (total < 0) {
+      total = 55;
+      nextHour = ((hour - 2 + 12) % 12) + 1;
+    } else if (total > 59) {
+      total = 0;
+      nextHour = (hour % 12) + 1;
+    }
+    onChange(nextHour, String(total).padStart(2, "0"), period);
+  };
+  const control = (
+    label: string,
+    onPress: () => void,
+    icon: "remove" | "add",
+  ) => (
+    <Pressable
+      disabled={disabled}
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={s.control}
+    >
+      <Ionicons name={icon} size={25} color={c.green} />
+    </Pressable>
+  );
+  return (
+    <View style={[s.card, disabled && s.disabled]}>
+      <View style={s.column}>
+        {control("Decrease hour", () => adjustHour(-1), "remove")}
+        <Text style={s.value}>{hour}</Text>
+        {control("Increase hour", () => adjustHour(1), "add")}
+      </View>
+      <Text style={s.colon}>:</Text>
+      <View style={s.column}>
+        {control("Decrease minutes", () => adjustMinute(-5), "remove")}
+        <Text style={s.value}>{minute}</Text>
+        {control("Increase minutes", () => adjustMinute(5), "add")}
+      </View>
+      <View style={s.period}>
+        {(["AM", "PM"] as const).map((item) => (
+          <Pressable
+            key={item}
+            onPress={() => onChange(hour, minute, item)}
+            style={[s.periodButton, period === item && s.selected]}
+          >
+            <Text style={[s.periodText, period === item && s.selectedText]}>
+              {item}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
+const styles = (c: AppColors) =>
+  StyleSheet.create({
+    card: {
+      backgroundColor: c.surface,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: c.line,
+      padding: 14,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      marginBottom: 22,
+    },
+    disabled: { opacity: 0.4 },
+    column: { alignItems: "center" },
+    control: {
+      width: 52,
+      height: 44,
+      borderRadius: 12,
+      backgroundColor: c.surfaceRaised,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    value: {
+      color: c.text,
+      fontSize: 30,
+      fontWeight: "700",
+      minWidth: 54,
+      textAlign: "center",
+      paddingVertical: 5,
+    },
+    colon: { color: c.text, fontSize: 28, fontWeight: "700" },
+    period: { gap: 8, marginLeft: 8 },
+    periodButton: {
+      minWidth: 58,
+      minHeight: 48,
+      borderRadius: 11,
+      backgroundColor: c.surfaceRaised,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    selected: { backgroundColor: c.green },
+    periodText: { color: c.muted, fontWeight: "700" },
+    selectedText: { color: c.onAccent },
+  });

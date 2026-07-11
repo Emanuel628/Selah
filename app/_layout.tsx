@@ -4,9 +4,13 @@ import { AppSettingsProvider, useAppSettings } from "@/state/AppSettings";
 import { GardenProvider } from "@/state/Garden";
 import { AuthProvider, useAuth } from "@/state/Auth";
 import { useEffect } from "react";
+import "@/lib/notifications";
+import { BiometricProvider, useBiometric } from "@/state/Biometric";
+import { BiometricLock } from "@/components/BiometricLock";
 
 function Navigation() {
-  const { darkMode } = useAppSettings();
+  const { darkMode, readerFullscreen } = useAppSettings();
+  const { locked, checking } = useBiometric();
   const { session, loading, passwordRecovery } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
@@ -27,8 +31,15 @@ function Navigation() {
   }, [session, loading, pathname, passwordRecovery]);
   return (
     <>
-      <StatusBar style={darkMode ? "light" : "dark"} />
-      <Stack screenOptions={{ headerShown: false }} />
+      <StatusBar
+        style={darkMode ? "light" : "dark"}
+        hidden={readerFullscreen}
+      />
+      {locked && !checking ? (
+        <BiometricLock />
+      ) : (
+        <Stack screenOptions={{ headerShown: false }} />
+      )}
     </>
   );
 }
@@ -36,9 +47,11 @@ export default function Root() {
   return (
     <AuthProvider>
       <AppSettingsProvider>
-        <GardenProvider>
-          <Navigation />
-        </GardenProvider>
+        <BiometricProvider>
+          <GardenProvider>
+            <Navigation />
+          </GardenProvider>
+        </BiometricProvider>
       </AppSettingsProvider>
     </AuthProvider>
   );

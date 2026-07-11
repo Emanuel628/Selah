@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -14,6 +14,8 @@ import { AppColors } from "@/lib/theme";
 import { useAppSettings } from "@/state/AppSettings";
 import { useThemeColors } from "@/state/useThemeColors";
 import { useAuth } from "@/state/Auth";
+import { useBiometric } from "@/state/Biometric";
+import { supabase } from "@/lib/supabase";
 
 function Setting({
   name,
@@ -87,11 +89,32 @@ export default function Settings() {
     reminderHour,
     reminderMinute,
     reminderPeriod,
+    reminderEnabled,
     bookmarkColor,
     readerFontSize,
   } = useAppSettings();
-  const [biometric, setBiometric] = useState(false);
-  const { signOut } = useAuth();
+  const { enabled: biometric, enable: setBiometric } = useBiometric();
+  const [biometricMessage, setBiometricMessage] = useState("");
+  const { signOut, user } = useAuth();
+  const [subscriptionDetail, setSubscriptionDetail] = useState("Free");
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("profiles")
+      .select("subscription_tier,trial_ends_at")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!data || data.subscription_tier !== "pro") return;
+        const end = data.trial_ends_at ? new Date(data.trial_ends_at) : null;
+        const days = end
+          ? Math.max(0, Math.ceil((end.getTime() - Date.now()) / 86400000))
+          : null;
+        setSubscriptionDetail(
+          days === null ? "Pro" : `Pro trial · ${days} days`,
+        );
+      });
+  }, [user?.id]);
   const row = (props: any) => <Setting {...props} c={c} s={s} />;
   return (
     <Screen title="Settings">
@@ -104,7 +127,7 @@ export default function Settings() {
           {row({
             icon: "star-outline",
             name: "Subscription",
-            detail: "Free",
+            detail: subscriptionDetail,
             onPress: () => router.push("/subscription"),
             last: true,
           })}
@@ -160,13 +183,31 @@ export default function Settings() {
             icon: "finger-print-outline",
             name: "Biometric Lock",
             value: biometric,
-            onChange: setBiometric,
+            onChange: async (value: boolean) => {
+              const result = await setBiometric(value);
+              setBiometricMessage(result.message);
+            },
           })}
           {row({
             icon: "notifications-outline",
             name: "Daily Reminders",
-            detail: `${reminderHour}:${reminderMinute} ${reminderPeriod}`,
+            detail: reminderEnabled
+              ? `${reminderHour}:${reminderMinute} ${reminderPeriod}`
+              : "Off",
             onPress: () => router.push("/reminders"),
+            last: true,
+          })}
+        </View>
+        {!!biometricMessage && (
+          <Text style={s.message}>{biometricMessage}</Text>
+        )}
+        <Text style={s.label}>SUPPORT</Text>
+        <View style={s.group}>
+          {row({
+            icon: "help-circle-outline",
+            name: "Help & How to Use Selah",
+            detail: "Guide",
+            onPress: () => router.push("/help"),
             last: true,
           })}
         </View>
@@ -214,6 +255,14 @@ const styles = (c: AppColors) =>
     last: { borderBottomWidth: 0 },
     name: { color: c.text, fontWeight: "600", flex: 1 },
     detail: { color: c.green, fontSize: 11, maxWidth: 150 },
+    message: {
+      color: c.muted,
+      fontSize: 10,
+      lineHeight: 15,
+      marginTop: -10,
+      marginBottom: 14,
+      paddingHorizontal: 4,
+    },
     logout: {
       height: 48,
       borderRadius: 12,

@@ -54,6 +54,8 @@ type Settings = {
   readerFontSize: number;
   setReaderFontSize: (size: number) => void;
   saveReaderPreferences: () => Promise<void>;
+  readerFullscreen: boolean;
+  setReaderFullscreen: (v: boolean) => void;
   reminderHour: number;
   setReminderHour: (v: number) => void;
   reminderMinute: string;
@@ -62,11 +64,14 @@ type Settings = {
   setReminderPeriod: (v: "AM" | "PM") => void;
   reminderDays: number[];
   setReminderDays: (v: number[]) => void;
+  reminderEnabled: boolean;
+  setReminderEnabled: (v: boolean) => void;
   saveReminderSettings: (
     hour: number,
     minute: string,
     period: "AM" | "PM",
     days: number[],
+    enabled: boolean,
   ) => Promise<void>;
 };
 const Context = createContext<Settings | null>(null);
@@ -76,10 +81,36 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
   const deviceScheme = useColorScheme();
   const [darkMode, setDarkModeState] = useState(deviceScheme !== "light");
   const [followSystemTheme, setFollowSystemTheme] = useState(true);
-  const setDarkMode = useCallback((value: boolean) => {
-    setFollowSystemTheme(false);
-    setDarkModeState(value);
-  }, []);
+  const setDarkMode = useCallback(
+    (value: boolean) => {
+      setFollowSystemTheme(false);
+      setDarkModeState(value);
+      AsyncStorage.getItem("selah.reader.preferences.v1").then((raw) => {
+        let saved: any = {};
+        try {
+          saved = raw ? JSON.parse(raw) : {};
+        } catch {}
+        return AsyncStorage.setItem(
+          "selah.reader.preferences.v1",
+          JSON.stringify({
+            ...saved,
+            darkMode: value,
+            themeMode: value ? "dark" : "light",
+          }),
+        );
+      });
+      if (user)
+        supabase
+          .from("reader_preferences")
+          .upsert({
+            user_id: user.id,
+            dark_mode: value,
+            theme_mode: value ? "dark" : "light",
+          })
+          .then(() => {});
+    },
+    [user],
+  );
   useEffect(() => {
     if (followSystemTheme) setDarkModeState(deviceScheme !== "light");
   }, [deviceScheme, followSystemTheme]);
@@ -144,6 +175,7 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
     [user, preferredTranslationId, bookmarkColor],
   );
   const [readerFontSize, setReaderFontSize] = useState(20);
+  const [readerFullscreen, setReaderFullscreen] = useState(false);
   useEffect(() => {
     AsyncStorage.getItem("selah.reader.preferences.v1").then((raw) => {
       if (!raw) return;
@@ -196,6 +228,7 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
   const [reminderMinute, setReminderMinute] = useState("00");
   const [reminderPeriod, setReminderPeriod] = useState<"AM" | "PM">("AM");
   const [reminderDays, setReminderDays] = useState([1, 2, 3, 4, 5]);
+  const [reminderEnabled, setReminderEnabled] = useState(true);
   useEffect(() => {
     if (!user) return;
     Promise.all([
@@ -244,6 +277,7 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
           page: savedBookmark.data.page,
         });
       if (reminder.data) {
+        setReminderEnabled(reminder.data.enabled);
         setReminderHour(reminder.data.hour);
         setReminderMinute(String(reminder.data.minute).padStart(2, "0"));
         setReminderPeriod(reminder.data.period);
@@ -264,10 +298,12 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
       minute: string,
       period: "AM" | "PM",
       days: number[],
+      enabled: boolean,
     ) => {
       if (!user) return;
       await supabase.from("reminder_settings").upsert({
         user_id: user.id,
+        enabled,
         hour,
         minute: Number(minute),
         period,
@@ -302,6 +338,8 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
       readerFontSize,
       setReaderFontSize,
       saveReaderPreferences,
+      readerFullscreen,
+      setReaderFullscreen,
       reminderHour,
       setReminderHour,
       reminderMinute,
@@ -310,10 +348,13 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
       setReminderPeriod,
       reminderDays,
       setReminderDays,
+      reminderEnabled,
+      setReminderEnabled,
       saveReminderSettings,
     }),
     [
       darkMode,
+      setDarkMode,
       showVerseNumbers,
       redLettering,
       preferredTranslationId,
@@ -330,10 +371,12 @@ export function AppSettingsProvider({ children }: PropsWithChildren) {
       saveBookmark,
       readerFontSize,
       saveReaderPreferences,
+      readerFullscreen,
       reminderHour,
       reminderMinute,
       reminderPeriod,
       reminderDays,
+      reminderEnabled,
       saveReminderSettings,
     ],
   );
