@@ -1,3 +1,227 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native'; import { Ionicons } from '@expo/vector-icons'; import { DetailScreen } from '@/components/DetailScreen'; import { colors } from '@/lib/theme';
-export default function NoteDetail(){return <DetailScreen title="Reflection" subtitle="Genesis 1:2"><ScrollView contentContainerStyle={s.body}><Text style={s.eyebrow}>GENESIS 1:2 · TODAY</Text><Text style={s.title}>Life moving over chaos</Text><Text style={s.note}>“Spirit of God” (Ruach) signifies dynamic life moving over chaos.</Text><Text style={s.label}>SCRIPTURE ANCHOR</Text><View style={s.scripture}><Text style={s.verse}><Text style={s.num}>2  </Text>Now the earth was formless and empty, darkness was over the surface of the deep, and the Spirit of God was hovering over the waters.</Text></View><Text style={s.label}>CONNECTIONS</Text><View style={s.connection}><Ionicons name="git-branch-outline" size={19} color={colors.green}/><View><Text style={s.connectionTitle}>Colossians 1:16</Text><Text style={s.connectionCopy}>All things were created through Him.</Text></View></View><Text style={s.tag}>#Sovereignty</Text></ScrollView></DetailScreen>}
-const s=StyleSheet.create({body:{padding:20},eyebrow:{color:colors.green,fontSize:10,fontWeight:'700',letterSpacing:1.3},title:{color:colors.text,fontSize:24,fontWeight:'700',marginTop:10},note:{color:colors.text,fontSize:17,lineHeight:27,marginTop:18,marginBottom:28},label:{color:colors.muted,fontSize:10,fontWeight:'700',letterSpacing:1.3,marginBottom:8},scripture:{backgroundColor:colors.surface,borderRadius:15,padding:17,borderLeftWidth:3,borderLeftColor:colors.gold,marginBottom:24},verse:{color:colors.text,fontFamily:'serif',fontSize:16,lineHeight:25},num:{color:colors.gold,fontSize:11,fontWeight:'700'},connection:{backgroundColor:colors.surface,borderRadius:13,padding:14,flexDirection:'row',gap:12,alignItems:'center'},connectionTitle:{color:colors.text,fontWeight:'600'},connectionCopy:{color:colors.muted,fontSize:11,marginTop:3},tag:{color:colors.gold,marginTop:20}});
+import { useMemo, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { DetailScreen } from "@/components/DetailScreen";
+import { AppColors } from "@/lib/theme";
+import { useGarden } from "@/state/Garden";
+import { useThemeColors } from "@/state/useThemeColors";
+
+export default function NoteDetail() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const { getNote, deleteNote } = useGarden();
+  const note = getNote(id);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const c = useThemeColors();
+  const s = useMemo(() => styles(c), [c]);
+  if (!note)
+    return (
+      <DetailScreen title="Reflection">
+        <View style={s.missing}>
+          <Ionicons name="leaf-outline" size={30} color={c.muted} />
+          <Text style={s.missingTitle}>Reflection not found</Text>
+          <Pressable
+            onPress={() => router.replace("/garden")}
+            style={s.returnButton}
+          >
+            <Text style={s.returnText}>Return to Garden</Text>
+          </Pressable>
+        </View>
+      </DetailScreen>
+    );
+  const remove = () => {
+    deleteNote(note.id);
+    router.replace("/garden");
+  };
+  const action = (
+    <Pressable
+      accessibilityLabel="Edit reflection"
+      onPress={() =>
+        router.push({ pathname: "/note/new", params: { id: note.id } })
+      }
+      style={s.edit}
+    >
+      <Ionicons name="create-outline" size={21} color={c.green} />
+    </Pressable>
+  );
+  return (
+    <DetailScreen title="Reflection" subtitle={note.reference} action={action}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={s.body}
+      >
+        <View style={s.meta}>
+          <Text style={s.eyebrow}>{note.reference.toUpperCase()}</Text>
+          <Text style={s.group}>{note.group}</Text>
+        </View>
+        <Text style={s.title}>{note.title}</Text>
+        <Text style={s.note}>{note.body}</Text>
+        <Text style={s.label}>SCRIPTURE ANCHOR</Text>
+        <View style={s.anchor}>
+          <Ionicons name="book-outline" size={19} color={c.gold} />
+          <Text style={s.anchorText}>{note.reference}</Text>
+        </View>
+        <Text style={s.label}>TAGS & CONNECTIONS</Text>
+        <View style={s.tags}>
+          {note.tags.length ? (
+            note.tags.map((tag) => (
+              <Text key={tag} style={s.tag}>
+                #{tag}
+              </Text>
+            ))
+          ) : (
+            <Text style={s.noTags}>No tags yet</Text>
+          )}
+        </View>
+        {!confirmDelete ? (
+          <Pressable
+            accessibilityLabel="Delete reflection"
+            onPress={() => setConfirmDelete(true)}
+            style={s.delete}
+          >
+            <Ionicons name="trash-outline" size={18} color={c.danger} />
+            <Text style={s.deleteText}>Delete reflection</Text>
+          </Pressable>
+        ) : (
+          <View style={s.confirm}>
+            <Text style={s.confirmTitle}>Delete this reflection?</Text>
+            <Text style={s.confirmCopy}>This cannot be undone.</Text>
+            <View style={s.confirmActions}>
+              <Pressable
+                onPress={() => setConfirmDelete(false)}
+                style={s.cancel}
+              >
+                <Text style={s.cancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                accessibilityLabel="Confirm delete reflection"
+                onPress={remove}
+                style={s.confirmButton}
+              >
+                <Text style={s.confirmButtonText}>Delete</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
+      </ScrollView>
+    </DetailScreen>
+  );
+}
+const styles = (c: AppColors) =>
+  StyleSheet.create({
+    body: { padding: 20, paddingBottom: 38 },
+    edit: {
+      width: 44,
+      height: 44,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    meta: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    eyebrow: {
+      color: c.green,
+      fontSize: 10,
+      fontWeight: "700",
+      letterSpacing: 1.3,
+    },
+    group: {
+      color: c.muted,
+      fontSize: 9,
+      textTransform: "uppercase",
+      letterSpacing: 1,
+    },
+    title: { color: c.text, fontSize: 24, fontWeight: "700", marginTop: 10 },
+    note: {
+      color: c.text,
+      fontSize: 17,
+      lineHeight: 27,
+      marginTop: 18,
+      marginBottom: 28,
+    },
+    label: {
+      color: c.muted,
+      fontSize: 10,
+      fontWeight: "700",
+      letterSpacing: 1.3,
+      marginBottom: 8,
+    },
+    anchor: {
+      backgroundColor: c.surface,
+      borderRadius: 15,
+      padding: 17,
+      borderLeftWidth: 3,
+      borderLeftColor: c.gold,
+      marginBottom: 24,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    anchorText: { color: c.text, fontWeight: "600" },
+    tags: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    tag: {
+      color: c.gold,
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.line,
+      paddingHorizontal: 11,
+      paddingVertical: 8,
+      borderRadius: 17,
+      fontSize: 11,
+    },
+    noTags: { color: c.muted },
+    delete: {
+      height: 48,
+      marginTop: 36,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: c.danger,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 7,
+    },
+    deleteText: { color: c.danger, fontWeight: "700" },
+    confirm: {
+      backgroundColor: c.surface,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: c.danger,
+      padding: 16,
+      marginTop: 28,
+    },
+    confirmTitle: { color: c.text, fontWeight: "700" },
+    confirmCopy: { color: c.muted, fontSize: 11, marginTop: 4 },
+    confirmActions: { flexDirection: "row", gap: 8, marginTop: 14 },
+    cancel: {
+      flex: 1,
+      height: 44,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: c.line,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    cancelText: { color: c.text, fontWeight: "700" },
+    confirmButton: {
+      flex: 1,
+      height: 44,
+      borderRadius: 10,
+      backgroundColor: c.danger,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    confirmButtonText: { color: c.onAccent, fontWeight: "800" },
+    missing: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 30,
+    },
+    missingTitle: { color: c.text, fontWeight: "700", marginTop: 10 },
+    returnButton: { marginTop: 16, padding: 12 },
+    returnText: { color: c.green, fontWeight: "700" },
+  });
