@@ -32,6 +32,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     supabase.auth
       .getSession()
       .then(({ data }) => setSession(data.session))
+      .catch((error) => console.warn("Could not restore auth session", error))
       .finally(() => setLoading(false));
     const {
       data: { subscription },
@@ -47,9 +48,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
           : null;
       if (code) await supabase.auth.exchangeCodeForSession(code);
     };
-    Linking.getInitialURL().then((url) => {
-      if (url) void handle(url);
-    });
+    Linking.getInitialURL()
+      .then((url) => {
+        if (url) void handle(url);
+      })
+      .catch((error) => console.warn("Could not read initial link", error));
     const listener = Linking.addEventListener("url", (event) =>
       handle(event.url),
     );

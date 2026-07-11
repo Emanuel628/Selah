@@ -8,7 +8,7 @@ const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
 if (!supabaseUrl || !supabasePublishableKey) {
   throw new Error(
-    "Missing Supabase environment variables. Copy .env.example to .env and add the project values.",
+    "Missing Supabase environment variables. Configure EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY for this build.",
   );
 }
 
@@ -22,9 +22,9 @@ export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
   },
 });
 
-if (Platform.OS !== "web")
-  AppState.addEventListener("change", (state) =>
-    state === "active"
-      ? supabase.auth.startAutoRefresh()
-      : supabase.auth.stopAutoRefresh(),
-  );
+if (Platform.OS !== "web") {
+  AppState.addEventListener("change", (state) => {
+    if (state === "active") supabase.auth.startAutoRefresh();
+    else supabase.auth.stopAutoRefresh();
+  });
+}

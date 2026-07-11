@@ -6,15 +6,16 @@
     "scheme": "selah",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "plugins": [
-      "expo-router",
-      "@react-native-community/datetimepicker"
-    ],
+    "plugins": ["expo-router", "@react-native-community/datetimepicker"],
     "experiments": {
       "typedRoutes": true
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.emanuel62893.selah",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -23,6 +24,12 @@
     },
     "web": {
       "bundler": "metro"
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "912baa14-80a5-4875-aacb-ddd70ec091a5"
+      }
     }
   }
 }
