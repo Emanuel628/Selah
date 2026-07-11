@@ -10,13 +10,13 @@
     "plugins": [
       "expo-router",
       "@react-native-community/datetimepicker",
-      "expo-notifications",
       [
         "expo-local-authentication",
         {
           "faceIDPermission": "Allow Selah to use Face ID to unlock your Scripture Garden."
         }
-      ]
+      ],
+      "./plugins/with-local-notifications"
     ],
     "experiments": {
       "typedRoutes": true
