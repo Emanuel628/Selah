@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { ConfirmSheet } from "@/components/ConfirmSheet";
 import { Screen } from "@/components/Screen";
 import {
   buildBrowseFacets,
@@ -24,7 +25,7 @@ import {
   statusLabel,
 } from "@/lib/gardenEngine";
 import { AppColors } from "@/lib/theme";
-import { THOUGHT_GROUPS, ThoughtGroup, useGarden } from "@/state/Garden";
+import { GardenNote, THOUGHT_GROUPS, ThoughtGroup, useGarden } from "@/state/Garden";
 import { useThemeColors } from "@/state/useThemeColors";
 
 type GardenView = "Reflections" | "Browse" | "Insights";
@@ -33,6 +34,8 @@ type Sort = "Updated" | "Newest" | "Oldest";
 type BrowseFocus =
   | { type: "theme" | "book" | "thought"; facet: GardenFacet }
   | null;
+type FacetListFocus = { title: string; type: "theme" | "book" | "thought"; facets: GardenFacet[] } | null;
+type PendingStatus = { type: "resolved" | "practiced"; note: GardenNote } | null;
 
 const QUICK_FILTERS: Quick[] = [
   "All",
@@ -66,6 +69,9 @@ export default function Garden() {
   const [sort, setSort] = useState<Sort>("Updated");
   const [browseFocus, setBrowseFocus] = useState<BrowseFocus>(null);
   const [whyCard, setWhyCard] = useState<InsightCard | null>(null);
+  const [facetListFocus, setFacetListFocus] = useState<FacetListFocus>(null);
+  const [facetListQuery, setFacetListQuery] = useState("");
+  const [pendingStatus, setPendingStatus] = useState<PendingStatus>(null);
 
   const facets = useMemo(() => buildBrowseFacets(notes), [notes]);
   const insights = useMemo(
@@ -73,6 +79,12 @@ export default function Garden() {
     [notes, dismissedInsightIds],
   );
   const suggestedConnections = useMemo(() => buildSuggestedConnectionPairs(notes), [notes]);
+  const facetListResults = useMemo(() => {
+    if (!facetListFocus) return [];
+    const clean = facetListQuery.trim().toLowerCase();
+    if (!clean) return facetListFocus.facets;
+    return facetListFocus.facets.filter((facet) => facet.name.toLowerCase().includes(clean));
+  }, [facetListFocus, facetListQuery]);
   const searched = useMemo(() => hybridSearch(notes, reflectionQuery), [notes, reflectionQuery]);
   const filtered = useMemo(() => {
     return searched
@@ -159,16 +171,22 @@ export default function Garden() {
         openEvidenceList(card);
         break;
       case "mark_practiced":
-        if (card.evidence[0]) markPracticed(card.evidence[0].id);
+        if (card.evidence[0]) setPendingStatus({ type: "practiced", note: card.evidence[0] });
         break;
       case "mark_resolved":
-        if (card.evidence[0]) markResolved(card.evidence[0].id);
+        if (card.evidence[0]) setPendingStatus({ type: "resolved", note: card.evidence[0] });
         break;
       case "add_follow_up":
       default:
         openFirstEvidence(card);
         break;
     }
+  };
+  const confirmPendingStatus = () => {
+    if (!pendingStatus) return;
+    if (pendingStatus.type === "practiced") markPracticed(pendingStatus.note.id);
+    else markResolved(pendingStatus.note.id);
+    setPendingStatus(null);
   };
 
   if (!notes.length) {
@@ -328,6 +346,10 @@ export default function Garden() {
                 type="theme"
                 facets={facets.themes}
                 setBrowseFocus={openBrowseFocus}
+                onViewAll={(focus) => {
+                  setFacetListQuery("");
+                  setFacetListFocus(focus);
+                }}
                 s={s}
               />
               <FacetBlock
@@ -335,6 +357,10 @@ export default function Garden() {
                 type="book"
                 facets={facets.books}
                 setBrowseFocus={openBrowseFocus}
+                onViewAll={(focus) => {
+                  setFacetListQuery("");
+                  setFacetListFocus(focus);
+                }}
                 s={s}
               />
               <FacetBlock
@@ -342,6 +368,10 @@ export default function Garden() {
                 type="thought"
                 facets={facets.groups}
                 setBrowseFocus={openBrowseFocus}
+                onViewAll={(focus) => {
+                  setFacetListQuery("");
+                  setFacetListFocus(focus);
+                }}
                 s={s}
               />
               <View style={s.facetBlock}>
@@ -505,6 +535,71 @@ export default function Garden() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        visible={!!facetListFocus}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setFacetListFocus(null)}
+      >
+        <View style={s.overlay}>
+          <Pressable style={s.scrim} onPress={() => setFacetListFocus(null)} />
+          <View style={s.sheet}>
+            <View style={s.sheetHeader}>
+              <Text style={s.sheetTitle}>{facetListFocus?.title}</Text>
+              <Pressable
+                accessibilityLabel="Close"
+                onPress={() => setFacetListFocus(null)}
+                style={s.close}
+              >
+                <Ionicons name="close" size={22} color={c.text} />
+              </Pressable>
+            </View>
+            <View style={s.search}>
+              <Ionicons name="search" size={18} color={c.muted} />
+              <TextInput
+                value={facetListQuery}
+                onChangeText={setFacetListQuery}
+                placeholder={`Search ${facetListFocus?.title.toLowerCase() ?? "items"}`}
+                placeholderTextColor={c.muted}
+                style={s.searchInput}
+              />
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.facetList}>
+              {facetListResults.map((facet) => (
+                <Pressable
+                  key={facet.name}
+                  accessibilityLabel={`Open ${facet.name}`}
+                  onPress={() => {
+                    if (!facetListFocus) return;
+                    openBrowseFocus({ type: facetListFocus.type, facet });
+                    setFacetListFocus(null);
+                  }}
+                  style={s.facetRow}
+                >
+                  <Text style={s.facetName}>{facet.name}</Text>
+                  <Text style={s.facetCount}>{facet.count}</Text>
+                </Pressable>
+              ))}
+              {!facetListResults.length && <Text style={s.muted}>No matches.</Text>}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      <ConfirmSheet
+        visible={!!pendingStatus}
+        title={
+          pendingStatus?.type === "practiced"
+            ? "Mark this application as practiced?"
+            : "Mark this question as resolved?"
+        }
+        body="This changes how Selah treats this reflection in open-thread insights."
+        confirmLabel={pendingStatus?.type === "practiced" ? "Mark practiced" : "Mark resolved"}
+        colors={c}
+        onCancel={() => setPendingStatus(null)}
+        onConfirm={confirmPendingStatus}
+      />
     </Screen>
   );
 }
@@ -514,18 +609,21 @@ function FacetBlock({
   type,
   facets,
   setBrowseFocus,
+  onViewAll,
   s,
 }: {
   title: string;
   type: "theme" | "book" | "thought";
   facets: GardenFacet[];
   setBrowseFocus: (value: BrowseFocus) => void;
+  onViewAll: (value: Exclude<FacetListFocus, null>) => void;
   s: ReturnType<typeof styles>;
 }) {
+  const visibleFacets = facets.slice(0, 8);
   return (
     <View style={s.facetBlock}>
       <Text style={s.facetTitle}>{title}</Text>
-      {facets.map((facet) => (
+      {visibleFacets.map((facet) => (
         <Pressable
           accessibilityLabel={`Open ${facet.name}`}
           key={facet.name}
@@ -537,6 +635,14 @@ function FacetBlock({
         </Pressable>
       ))}
       {!facets.length && <Text style={s.muted}>Nothing here yet.</Text>}
+      {facets.length > visibleFacets.length && (
+        <Pressable
+          accessibilityLabel={`View all ${title.toLowerCase()}`}
+          onPress={() => onViewAll({ title, type, facets })}
+        >
+          <Text style={s.viewAll}>View all {title.toLowerCase()}</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -622,6 +728,7 @@ const styles = (c: AppColors) =>
     connectionCount: { color: c.text, fontWeight: "800", marginTop: 4 },
     backLine: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
     facetSub: { color: c.muted, marginTop: -6, marginBottom: 12 },
+    facetList: { paddingTop: 12, paddingBottom: 18 },
     insightsBody: { padding: 18, paddingBottom: 36 },
     insightCard: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: 16, padding: 16, marginBottom: 13 },
     insightLabel: { color: c.gold, fontSize: 9, fontWeight: "900", letterSpacing: 1.1 },

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { ConfirmSheet } from "@/components/ConfirmSheet";
 import { DetailScreen } from "@/components/DetailScreen";
 import { AppColors } from "@/lib/theme";
 import { useGarden } from "@/state/Garden";
@@ -14,6 +15,7 @@ export default function NoteDetail() {
   const note = getNote(id);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
+  const [pendingStatus, setPendingStatus] = useState<"resolved" | "practiced" | null>(null);
   const c = useThemeColors();
   const s = useMemo(() => styles(c), [c]);
   if (!note)
@@ -42,6 +44,17 @@ export default function NoteDetail() {
   const revisit = () => {
     markRevisited(note.id);
     showStatusMessage("Marked as revisited");
+  };
+  const confirmPendingStatus = () => {
+    if (pendingStatus === "resolved") {
+      markResolved(note.id);
+      showStatusMessage("Marked resolved");
+    }
+    if (pendingStatus === "practiced") {
+      markPracticed(note.id);
+      showStatusMessage("Application marked practiced");
+    }
+    setPendingStatus(null);
   };
   const action = (
     <Pressable
@@ -85,10 +98,7 @@ export default function NoteDetail() {
             </Pressable>
             {note.group === "Question" && note.status === "open" && (
               <Pressable
-                onPress={() => {
-                  markResolved(note.id);
-                  showStatusMessage("Marked resolved");
-                }}
+                onPress={() => setPendingStatus("resolved")}
                 style={s.statusButton}
               >
                 <Text style={s.statusButtonText}>Mark resolved</Text>
@@ -96,10 +106,7 @@ export default function NoteDetail() {
             )}
             {note.group === "Application" && note.status === "open" && (
               <Pressable
-                onPress={() => {
-                  markPracticed(note.id);
-                  showStatusMessage("Application marked practiced");
-                }}
+                onPress={() => setPendingStatus("practiced")}
                 style={s.statusButton}
               >
                 <Text style={s.statusButtonText}>I practiced this</Text>
@@ -164,6 +171,19 @@ export default function NoteDetail() {
           </View>
         )}
       </ScrollView>
+      <ConfirmSheet
+        visible={!!pendingStatus}
+        title={
+          pendingStatus === "practiced"
+            ? "Mark this application as practiced?"
+            : "Mark this question as resolved?"
+        }
+        body="This changes how Selah treats this reflection in open-thread insights."
+        confirmLabel={pendingStatus === "practiced" ? "Mark practiced" : "Mark resolved"}
+        colors={c}
+        onCancel={() => setPendingStatus(null)}
+        onConfirm={confirmPendingStatus}
+      />
     </DetailScreen>
   );
 }

@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { ConfirmSheet } from "@/components/ConfirmSheet";
 import { Screen } from "@/components/Screen";
 import { relationshipScore } from "@/lib/gardenEngine";
 import { AppColors } from "@/lib/theme";
@@ -24,6 +25,10 @@ export default function Revisit() {
   const c = useThemeColors();
   const s = useMemo(() => styles(c), [c]);
   const queue = useMemo(() => buildQueue(notes), [notes]);
+  const [pendingStatus, setPendingStatus] = useState<{
+    type: "resolved" | "practiced";
+    note: GardenNote;
+  } | null>(null);
 
   const openNote = (note: GardenNote) => {
     markRevisited(note.id);
@@ -56,13 +61,31 @@ export default function Revisit() {
             key={item.id}
             item={item}
             onOpen={() => openNote(item.note)}
-            onResolved={() => markResolved(item.note.id)}
-            onPracticed={() => markPracticed(item.note.id)}
+            onResolved={() => setPendingStatus({ type: "resolved", note: item.note })}
+            onPracticed={() => setPendingStatus({ type: "practiced", note: item.note })}
             c={c}
             s={s}
           />
         ))}
       </ScrollView>
+      <ConfirmSheet
+        visible={!!pendingStatus}
+        title={
+          pendingStatus?.type === "practiced"
+            ? "Mark this application as practiced?"
+            : "Mark this question as resolved?"
+        }
+        body="This changes how Selah treats this reflection in open-thread insights."
+        confirmLabel={pendingStatus?.type === "practiced" ? "Mark practiced" : "Mark resolved"}
+        colors={c}
+        onCancel={() => setPendingStatus(null)}
+        onConfirm={() => {
+          if (!pendingStatus) return;
+          if (pendingStatus.type === "practiced") markPracticed(pendingStatus.note.id);
+          else markResolved(pendingStatus.note.id);
+          setPendingStatus(null);
+        }}
+      />
     </Screen>
   );
 }
@@ -130,7 +153,7 @@ function findBestConnection(notes: GardenNote[]) {
     for (const b of notes) {
       if (a.id >= b.id) continue;
       const relation = relationshipScore(a, b);
-      if (relation.concept < 0.16 || !relation.secondary) continue;
+      if (relation.concept < 0.24 || relation.score < 0.26 || !relation.secondary) continue;
       if (!best || relation.score > best.score) best = { a, b, score: relation.score };
     }
   }

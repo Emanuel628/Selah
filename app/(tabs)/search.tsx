@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { HighlightedText } from "@/components/HighlightedText";
 import { Screen } from "@/components/Screen";
 import { getChapter } from "@/lib/bibleApi";
 import { paginateVerses } from "@/lib/readerPagination";
@@ -148,9 +149,13 @@ export default function Search() {
                 <Text style={s.resultRef}>
                   {result.bookName} {result.chapter}:{result.verse}
                 </Text>
-                <Text numberOfLines={4} style={s.resultText}>
-                  {result.text}
-                </Text>
+                <HighlightedText
+                  text={result.text}
+                  query={clean}
+                  colors={c}
+                  numberOfLines={4}
+                  style={s.resultText}
+                />
               </Pressable>
             ))}
             {!scriptureResults.length && (

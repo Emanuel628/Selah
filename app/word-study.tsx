@@ -11,6 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { DetailScreen } from "@/components/DetailScreen";
+import { HighlightedText } from "@/components/HighlightedText";
 import { buildScriptureIndex, searchScriptureIndex } from "@/lib/scriptureSearch";
 import { useEntitlements } from "@/lib/useEntitlements";
 import { AppColors } from "@/lib/theme";
@@ -92,7 +93,13 @@ export default function WordStudy() {
               <Text style={s.reference}>
                 {result.bookName} {result.chapter}:{result.verse}
               </Text>
-              <Text numberOfLines={3} style={s.copy}>{result.text}</Text>
+              <HighlightedText
+                text={result.text}
+                query={term}
+                colors={c}
+                numberOfLines={3}
+                style={s.copy}
+              />
             </Pressable>
           ))
         ) : (
@@ -107,7 +114,13 @@ export default function WordStudy() {
               style={s.result}
             >
               <Text style={s.reference}>{note.reference}</Text>
-              <Text style={s.noteTitle}>{note.title}</Text>
+              <HighlightedText
+                text={note.title || note.body}
+                query={term}
+                colors={c}
+                numberOfLines={2}
+                style={s.noteTitle}
+              />
             </Pressable>
           ))
         ) : (

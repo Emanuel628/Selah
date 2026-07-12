@@ -319,7 +319,7 @@ export function buildInsightCards(notes: GardenNote[], hiddenIds: string[] = [])
       headline: `Your recent reflections have mostly been ${dominant.name}s.`,
       explanation: `${dominant.count} of your last ${recent.length} reflections share this thought type. Consider developing one into a different next step.`,
       evidence: recent.filter((note) => note.group === dominant.name).slice(0, 4),
-      actionLabel: "Develop one further",
+      actionLabel: "Open a reflection",
       actionType: "add_follow_up",
       confidence: 0.76,
     });
@@ -339,7 +339,7 @@ export function buildInsightCards(notes: GardenNote[], hiddenIds: string[] = [])
         type: "emerging_thread",
         label: "Emerging pattern",
         headline: "A new thread may be forming.",
-        explanation: `These reflections appear related by meaning and at least one supporting signal such as theme, Scripture location, or thought type.`,
+        explanation: `These reflections share related concepts and at least one supporting signal such as a theme, Scripture location, or thought type.`,
         evidence,
         actionLabel: "View evidence",
         actionType: "view_evidence",
@@ -372,12 +372,12 @@ export function buildSuggestedConnectionPairs(notes: GardenNote[]) {
     for (const b of notes) {
       if (a.id >= b.id) continue;
       const relation = relationshipScore(a, b);
-      if (relation.concept < 0.16 || !relation.secondary) continue;
+      if (relation.concept < 0.24 || relation.score < 0.26 || !relation.secondary) continue;
       const key = [a.id, b.id].sort().join(":");
       pairs.set(key, { a, b, score: relation.score });
     }
   }
-  return [...pairs.values()].sort((a, b) => b.score - a.score);
+  return [...pairs.values()].sort((a, b) => b.score - a.score).slice(0, 10);
 }
 
 export function statusLabel(status: ReflectionStatus, group: ThoughtGroup | null) {

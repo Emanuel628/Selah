@@ -158,3 +158,24 @@ test("Garden insight and Revisit CTAs avoid duplicate user actions", async ({
   await expect(page.getByText("Worth returning to today", { exact: true })).toBeVisible();
   await expect(page.getByText("Mark resolved", { exact: true })).toHaveCount(0);
 });
+
+test("Reflection status actions require confirmation", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Reflect on this passage").click();
+  await page.getByLabel("Reflection text").fill("What does grace teach me about trust?");
+  await page.getByText("Add details").click();
+  await page.getByLabel("Reflection title").fill("A grace question");
+  await page.getByText("Question", { exact: true }).last().click();
+  await page.getByText("Save to Garden").click();
+  await page.getByText("A grace question", { exact: true }).last().click();
+
+  await page.getByText("Mark resolved", { exact: true }).click();
+  await expect(page.getByText("Mark this question as resolved?")).toBeVisible();
+  await page.getByLabel("Close confirmation").click();
+  await expect(page.getByText("Mark this question as resolved?")).toHaveCount(0);
+  await expect(page.getByText("Open question", { exact: true })).toBeVisible();
+
+  await page.getByText("Mark resolved", { exact: true }).click();
+  await page.getByText("Mark resolved", { exact: true }).last().click();
+  await expect(page.getByText("Marked resolved", { exact: true })).toBeVisible();
+});

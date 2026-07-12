@@ -163,6 +163,7 @@ test("Search finds verse text across Scripture", async ({ page }) => {
   await expect(page.getByText("Genesis 1:1", { exact: true })).toBeVisible({
     timeout: 20000,
   });
+  await expect(page.getByTestId("highlighted-match").first()).toBeVisible();
 });
 
 test("Daily Reminder time is editable, saveable, and reflected in Settings", async ({ page }) => {
@@ -225,6 +226,7 @@ test("Word Study searches Scripture and Garden terms", async ({ page }) => {
   await expect(page.getByText("Genesis 1:3", { exact: true })).toBeVisible({
     timeout: 20000,
   });
+  await expect(page.getByTestId("highlighted-match").first()).toBeVisible();
 });
 
 test("Reader supports verse highlighting", async ({ page }) => {
