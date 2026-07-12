@@ -130,7 +130,7 @@ function findBestConnection(notes: GardenNote[]) {
     for (const b of notes) {
       if (a.id >= b.id) continue;
       const relation = relationshipScore(a, b);
-      if (relation.semantic < 0.16 || !relation.secondary) continue;
+      if (relation.concept < 0.16 || !relation.secondary) continue;
       if (!best || relation.score > best.score) best = { a, b, score: relation.score };
     }
   }

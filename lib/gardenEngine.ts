@@ -1,4 +1,5 @@
 import { GardenNote, ReflectionStatus, ThoughtGroup } from "@/state/Garden";
+import { GARDEN_CONCEPTS } from "@/lib/gardenConcepts";
 
 export type DateBucket = "Today" | "This Week" | "Earlier This Month" | "Older";
 
@@ -23,6 +24,7 @@ export type InsightCard = {
   headline: string;
   explanation: string;
   evidence: GardenNote[];
+  themeName?: string;
   actionLabel: string;
   actionType:
     | "follow_theme"
@@ -61,17 +63,7 @@ const STOP_WORDS = new Set([
   "want",
 ]);
 
-const CONCEPTS: Record<string, string[]> = {
-  trust: ["trust", "depend", "faith", "rely", "uncertain", "uncertainty"],
-  grace: ["grace", "mercy", "gift", "forgive", "forgiveness", "freedom"],
-  identity: ["identity", "called", "chosen", "belong", "child", "name"],
-  rest: ["rest", "peace", "still", "sabbath", "burden", "weary"],
-  obedience: ["obey", "obedience", "practice", "respond", "follow", "action"],
-  prayer: ["pray", "prayer", "ask", "cry", "thank", "worship"],
-  wisdom: ["wisdom", "understand", "discern", "listen", "learn", "know"],
-};
-
-const DAY = 86400000;
+export const DAY = 86400000;
 
 export function meaningfulText(note: GardenNote) {
   return `${note.title} ${note.body} ${note.reference} ${note.bookName} ${note.tags.join(" ")} ${note.group || ""}`;
@@ -88,7 +80,7 @@ export function tokenize(text: string) {
 export function conceptVector(text: string) {
   const words = new Set(tokenize(text));
   const vector = new Set<string>();
-  Object.entries(CONCEPTS).forEach(([concept, aliases]) => {
+  Object.entries(GARDEN_CONCEPTS).forEach(([concept, aliases]) => {
     if (aliases.some((alias) => words.has(alias))) vector.add(concept);
   });
   tokenize(text)
@@ -110,7 +102,7 @@ export function jaccard(a: Iterable<string>, b: Iterable<string>) {
   return shared / union.size;
 }
 
-export function semanticScore(a: GardenNote, b: GardenNote) {
+export function conceptOverlapScore(a: GardenNote, b: GardenNote) {
   return jaccard(conceptVector(meaningfulText(a)), conceptVector(meaningfulText(b)));
 }
 
@@ -141,14 +133,14 @@ export function thoughtTypeScore(a: GardenNote, b: GardenNote) {
 }
 
 export function relationshipScore(a: GardenNote, b: GardenNote) {
-  const semantic = semanticScore(a, b);
+  const concept = conceptOverlapScore(a, b);
   const theme = themeOverlap(a, b);
   const scripture = scriptureScore(a, b);
   const thought = thoughtTypeScore(a, b);
   const lexical = jaccard(tokenize(meaningfulText(a)), tokenize(meaningfulText(b)));
   const secondary = theme > 0 || scripture > 0 || thought >= 0.75 || lexical >= 0.08;
-  const score = semantic * 0.5 + theme * 0.2 + lexical * 0.1 + scripture * 0.1 + thought * 0.1;
-  return { score, semantic, theme, lexical, scripture, thought, secondary };
+  const score = concept * 0.5 + theme * 0.2 + lexical * 0.1 + scripture * 0.1 + thought * 0.1;
+  return { score, concept, theme, lexical, scripture, thought, secondary };
 }
 
 export function hybridSearch(notes: GardenNote[], query: string) {
@@ -162,9 +154,9 @@ export function hybridSearch(notes: GardenNote[], query: string) {
       const lexical =
         (text.includes(clean) ? 1 : 0) +
         queryTokens.reduce((sum, token) => sum + (text.includes(token) ? 0.2 : 0), 0);
-      const semantic = jaccard(queryConcepts, conceptVector(meaningfulText(note)));
+      const concept = jaccard(queryConcepts, conceptVector(meaningfulText(note)));
       const reference = note.reference.toLowerCase().includes(clean) ? 0.5 : 0;
-      return { note, score: lexical + semantic * 1.4 + reference };
+      return { note, score: lexical + concept * 1.4 + reference };
     })
     .filter((item) => item.score > 0.08)
     .sort((a, b) => b.score - a.score || b.note.updatedAt.localeCompare(a.note.updatedAt))
@@ -241,6 +233,7 @@ export function buildInsightCards(notes: GardenNote[], hiddenIds: string[] = [])
         headline: `${theme.name} keeps returning in your Garden.`,
         explanation: `This theme appears across ${theme.count} reflections and ${distinctReferences(theme.notes)} Scripture references.`,
         evidence: theme.notes.slice(0, 5),
+        themeName: theme.name,
         actionLabel: "Follow the theme",
         actionType: "follow_theme",
         confidence: Math.min(0.92, 0.62 + theme.count * 0.05 + separateDates(theme.notes) * 0.03),
@@ -258,6 +251,7 @@ export function buildInsightCards(notes: GardenNote[], hiddenIds: string[] = [])
           .slice(0, 3)
           .join(", ")}.`,
         evidence: theme.notes.slice(0, 5),
+        themeName: theme.name,
         actionLabel: "View evidence",
         actionType: "view_evidence",
         confidence: 0.78,
@@ -275,7 +269,7 @@ export function buildInsightCards(notes: GardenNote[], hiddenIds: string[] = [])
           ["Interpretation", "Connection", "Application"].includes(note.group || ""),
       )
       .map((note) => ({ note, relation: relationshipScore(question, note) }))
-      .filter((item) => item.relation.semantic >= 0.16 && item.relation.secondary)
+      .filter((item) => item.relation.concept >= 0.16 && item.relation.secondary)
       .sort((a, b) => b.relation.score - a.relation.score)[0];
     if (candidate) {
       cards.push({
@@ -285,7 +279,7 @@ export function buildInsightCards(notes: GardenNote[], hiddenIds: string[] = [])
         headline: "A later reflection may respond to an earlier question.",
         explanation: `This connects ${question.reference} with ${candidate.note.reference}. The wording is cautious because you decide whether the question is resolved.`,
         evidence: [question, candidate.note],
-        actionLabel: "Compare reflections",
+        actionLabel: "View related reflections",
         actionType: "compare_notes",
         confidence: Math.min(0.88, 0.62 + candidate.relation.score),
       });
@@ -325,7 +319,7 @@ export function buildInsightCards(notes: GardenNote[], hiddenIds: string[] = [])
       headline: `Your recent reflections have mostly been ${dominant.name}s.`,
       explanation: `${dominant.count} of your last ${recent.length} reflections share this thought type. Consider developing one into a different next step.`,
       evidence: recent.filter((note) => note.group === dominant.name).slice(0, 4),
-      actionLabel: "Continue an observation",
+      actionLabel: "Develop one further",
       actionType: "add_follow_up",
       confidence: 0.76,
     });
@@ -335,7 +329,7 @@ export function buildInsightCards(notes: GardenNote[], hiddenIds: string[] = [])
     const related = notes
       .filter((note) => note.id !== notes[index].id)
       .map((note) => ({ note, relation: relationshipScore(notes[index], note) }))
-      .filter((item) => item.relation.semantic >= 0.2 && item.relation.secondary)
+      .filter((item) => item.relation.concept >= 0.2 && item.relation.secondary)
       .sort((a, b) => b.relation.score - a.relation.score)
       .slice(0, 2);
     if (related.length >= 2) {
@@ -370,6 +364,20 @@ export function buildInsightCards(notes: GardenNote[], hiddenIds: string[] = [])
       return true;
     })
     .slice(0, 5);
+}
+
+export function buildSuggestedConnectionPairs(notes: GardenNote[]) {
+  const pairs = new Map<string, { a: GardenNote; b: GardenNote; score: number }>();
+  for (const a of notes) {
+    for (const b of notes) {
+      if (a.id >= b.id) continue;
+      const relation = relationshipScore(a, b);
+      if (relation.concept < 0.16 || !relation.secondary) continue;
+      const key = [a.id, b.id].sort().join(":");
+      pairs.set(key, { a, b, score: relation.score });
+    }
+  }
+  return [...pairs.values()].sort((a, b) => b.score - a.score);
 }
 
 export function statusLabel(status: ReflectionStatus, group: ThoughtGroup | null) {

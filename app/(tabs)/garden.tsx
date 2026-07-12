@@ -15,9 +15,12 @@ import { Screen } from "@/components/Screen";
 import {
   buildBrowseFacets,
   buildInsightCards,
+  buildSuggestedConnectionPairs,
   bucketFor,
+  DAY,
   GardenFacet,
   hybridSearch,
+  InsightCard,
   statusLabel,
 } from "@/lib/gardenEngine";
 import { AppColors } from "@/lib/theme";
@@ -52,7 +55,8 @@ export default function Garden() {
     dismissedInsightIds,
   } = useGarden();
   const [view, setView] = useState<GardenView>("Reflections");
-  const [query, setQuery] = useState("");
+  const [reflectionQuery, setReflectionQuery] = useState("");
+  const [browseQuery, setBrowseQuery] = useState("");
   const [quick, setQuick] = useState<Quick>("All");
   const [filterOpen, setFilterOpen] = useState(false);
   const [group, setGroup] = useState<"All" | ThoughtGroup>("All");
@@ -61,13 +65,15 @@ export default function Garden() {
   const [status, setStatus] = useState("All");
   const [sort, setSort] = useState<Sort>("Updated");
   const [browseFocus, setBrowseFocus] = useState<BrowseFocus>(null);
+  const [whyCard, setWhyCard] = useState<InsightCard | null>(null);
 
   const facets = useMemo(() => buildBrowseFacets(notes), [notes]);
   const insights = useMemo(
     () => buildInsightCards(notes, dismissedInsightIds),
     [notes, dismissedInsightIds],
   );
-  const searched = useMemo(() => hybridSearch(notes, query), [notes, query]);
+  const suggestedConnections = useMemo(() => buildSuggestedConnectionPairs(notes), [notes]);
+  const searched = useMemo(() => hybridSearch(notes, reflectionQuery), [notes, reflectionQuery]);
   const filtered = useMemo(() => {
     return searched
       .filter((note) => {
@@ -76,7 +82,9 @@ export default function Garden() {
           (quick === "Open Questions" && note.group === "Question" && note.status === "open") ||
           (quick === "Applications" && note.group === "Application") ||
           (quick === "Prayers" && note.group === "Prayer") ||
-          (quick === "Recently Revisited" && !!note.lastRevisitedAt);
+          (quick === "Recently Revisited" &&
+            !!note.lastRevisitedAt &&
+            Date.now() - new Date(note.lastRevisitedAt).getTime() <= 30 * DAY);
         return (
           quickMatch &&
           (group === "All" || note.group === group) &&
@@ -109,6 +117,59 @@ export default function Garden() {
     setSort("Updated");
     setQuick("All");
   };
+  const openBrowseFocus = (value: BrowseFocus) => {
+    setBrowseQuery("");
+    setBrowseFocus(value);
+  };
+  const openEvidenceList = (card: InsightCard) => {
+    openBrowseFocus({
+      type: "theme",
+      facet: {
+        name: "Supporting reflections",
+        count: card.evidence.length,
+        notes: card.evidence,
+      },
+    });
+    setView("Browse");
+  };
+  const followTheme = (card: InsightCard) => {
+    const themeName = card.themeName || card.evidence[0]?.tags[0];
+    const facet =
+      (themeName &&
+        facets.themes.find((item) => item.name.toLowerCase() === themeName.toLowerCase())) ||
+      {
+        name: themeName || "Supporting reflections",
+        count: card.evidence.length,
+        notes: card.evidence,
+      };
+    openBrowseFocus({ type: "theme", facet });
+    setView("Browse");
+  };
+  const openFirstEvidence = (card: InsightCard) => {
+    const first = card.evidence[0];
+    if (first) router.push({ pathname: "/note/[id]", params: { id: first.id } });
+  };
+  const handleInsightAction = (card: InsightCard) => {
+    switch (card.actionType) {
+      case "follow_theme":
+        followTheme(card);
+        break;
+      case "view_evidence":
+      case "compare_notes":
+        openEvidenceList(card);
+        break;
+      case "mark_practiced":
+        if (card.evidence[0]) markPracticed(card.evidence[0].id);
+        break;
+      case "mark_resolved":
+        if (card.evidence[0]) markResolved(card.evidence[0].id);
+        break;
+      case "add_follow_up":
+      default:
+        openFirstEvidence(card);
+        break;
+    }
+  };
 
   if (!notes.length) {
     return (
@@ -130,12 +191,9 @@ export default function Garden() {
   return (
     <Screen title="Garden">
       <View style={s.header}>
-        <View>
-          <Text style={s.headerTitle}>Garden</Text>
-          <Text style={s.count}>
-            {notes.length} {notes.length === 1 ? "reflection" : "reflections"}
-          </Text>
-        </View>
+        <Text style={s.count}>
+          {notes.length} {notes.length === 1 ? "reflection" : "reflections"}
+        </Text>
         <Pressable
           accessibilityLabel="New reflection"
           onPress={() => router.push("/note/new")}
@@ -146,27 +204,33 @@ export default function Garden() {
         </Pressable>
       </View>
 
-      <View style={s.searchRow}>
-        <View style={s.search}>
-          <Ionicons name="search" size={18} color={c.muted} />
-          <TextInput
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Search your Garden"
-            placeholderTextColor={c.muted}
-            style={s.searchInput}
-          />
+      {(view === "Reflections" || (view === "Browse" && browseFocus)) && (
+        <View style={s.searchRow}>
+          <View style={s.search}>
+            <Ionicons name="search" size={18} color={c.muted} />
+            <TextInput
+              value={view === "Reflections" ? reflectionQuery : browseQuery}
+              onChangeText={view === "Reflections" ? setReflectionQuery : setBrowseQuery}
+              placeholder={
+                view === "Reflections"
+                  ? "Search reflections"
+                  : `Search within ${browseFocus?.facet.name ?? "this group"}`
+              }
+              placeholderTextColor={c.muted}
+              style={s.searchInput}
+            />
+          </View>
+          {view === "Reflections" && (
+            <Pressable
+              accessibilityLabel="Advanced filters"
+              onPress={() => setFilterOpen(true)}
+              style={s.filterButton}
+            >
+              <Ionicons name="options-outline" size={20} color={c.green} />
+            </Pressable>
+          )}
         </View>
-        {view === "Reflections" && (
-          <Pressable
-            accessibilityLabel="Advanced filters"
-            onPress={() => setFilterOpen(true)}
-            style={s.filterButton}
-          >
-            <Ionicons name="options-outline" size={20} color={c.green} />
-          </Pressable>
-        )}
-      </View>
+      )}
 
       <View style={s.segment}>
         {(["Reflections", "Browse", "Insights"] as GardenView[]).map((item) => (
@@ -189,6 +253,7 @@ export default function Garden() {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
+            style={s.quickScroll}
             contentContainerStyle={s.quickFilters}
           >
             {QUICK_FILTERS.map((item) => (
@@ -262,30 +327,27 @@ export default function Garden() {
                 title="THEMES"
                 type="theme"
                 facets={facets.themes}
-                setBrowseFocus={setBrowseFocus}
-                c={c}
+                setBrowseFocus={openBrowseFocus}
                 s={s}
               />
               <FacetBlock
                 title="BOOKS"
                 type="book"
                 facets={facets.books}
-                setBrowseFocus={setBrowseFocus}
-                c={c}
+                setBrowseFocus={openBrowseFocus}
                 s={s}
               />
               <FacetBlock
                 title="THOUGHT TYPES"
                 type="thought"
                 facets={facets.groups}
-                setBrowseFocus={setBrowseFocus}
-                c={c}
+                setBrowseFocus={openBrowseFocus}
                 s={s}
               />
               <View style={s.facetBlock}>
                 <Text style={s.facetTitle}>CONNECTIONS</Text>
                 <Text style={s.connectionCount}>
-                  {insights.reduce((sum, card) => sum + Math.max(1, card.evidence.length - 1), 0)} confirmed or suggested relationships
+                  {suggestedConnections.length} suggested connections
                 </Text>
                 <Pressable onPress={() => router.push("/knowledge-graph" as any)}>
                   <Text style={s.viewAll}>View connections</Text>
@@ -294,7 +356,7 @@ export default function Garden() {
             </>
           ) : (
             <>
-              <Pressable onPress={() => setBrowseFocus(null)} style={s.backLine}>
+              <Pressable onPress={() => openBrowseFocus(null)} style={s.backLine}>
                 <Ionicons name="chevron-back" size={18} color={c.green} />
                 <Text style={s.viewAll}>Browse</Text>
               </Pressable>
@@ -309,17 +371,7 @@ export default function Garden() {
               <Text style={s.facetSub}>
                 {browseFocus.facet.count} {browseFocus.facet.count === 1 ? "reflection" : "reflections"}
               </Text>
-              <View style={s.search}>
-                <Ionicons name="search" size={18} color={c.muted} />
-                <TextInput
-                  value={query}
-                  onChangeText={setQuery}
-                  placeholder={`Search within ${browseFocus.facet.name}`}
-                  placeholderTextColor={c.muted}
-                  style={s.searchInput}
-                />
-              </View>
-              {hybridSearch(browseFocus.facet.notes, query).map((note) => (
+              {hybridSearch(browseFocus.facet.notes, browseQuery).map((note) => (
                 <Pressable
                   key={note.id}
                   onPress={() =>
@@ -349,41 +401,22 @@ export default function Garden() {
                   Based on {card.evidence.length} {card.evidence.length === 1 ? "reflection" : "reflections"}
                 </Text>
                 <View style={s.insightActions}>
-                  <Pressable
-                    onPress={() => {
-                      if (card.actionType === "mark_practiced") markPracticed(card.evidence[0].id);
-                      else if (card.actionType === "mark_resolved") markResolved(card.evidence[0].id);
-                      else if (card.evidence[0])
-                        router.push({
-                          pathname: "/note/[id]",
-                          params: { id: card.evidence[0].id },
-                        });
-                    }}
-                    style={s.insightPrimary}
-                  >
+                  <Pressable onPress={() => handleInsightAction(card)} style={s.insightPrimary}>
                     <Text style={s.insightPrimaryText}>{card.actionLabel}</Text>
                   </Pressable>
-                  {card.actionLabel !== "View evidence" && (
+                  {card.actionType !== "view_evidence" && card.actionType !== "compare_notes" && (
                     <Pressable
-                      onPress={() => {
-                        setBrowseFocus({
-                          type: "theme",
-                          facet: {
-                            name: "Evidence",
-                            count: card.evidence.length,
-                            notes: card.evidence,
-                          },
-                        });
-                        setView("Browse");
-                      }}
+                      onPress={() => openEvidenceList(card)}
                       style={s.insightSecondary}
                     >
-                      <Text style={s.insightSecondaryText}>View evidence</Text>
+                      <Text style={s.insightSecondaryText}>View supporting reflections</Text>
                     </Pressable>
                   )}
                 </View>
                 <View style={s.feedback}>
-                  <Text style={s.why}>Why you’re seeing this</Text>
+                  <Pressable onPress={() => setWhyCard(card)}>
+                    <Text style={s.why}>Why you’re seeing this</Text>
+                  </Pressable>
                   <Pressable onPress={() => archiveInsight(card.id)}>
                     <Text style={s.dismiss}>Dismiss</Text>
                   </Pressable>
@@ -408,7 +441,11 @@ export default function Garden() {
           <View style={s.sheet}>
             <View style={s.sheetHeader}>
               <Text style={s.sheetTitle}>Filter Garden</Text>
-              <Pressable onPress={() => setFilterOpen(false)} style={s.close}>
+              <Pressable
+                accessibilityLabel="Close"
+                onPress={() => setFilterOpen(false)}
+                style={s.close}
+              >
                 <Ionicons name="close" size={22} color={c.text} />
               </Pressable>
             </View>
@@ -430,6 +467,44 @@ export default function Garden() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        visible={!!whyCard}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setWhyCard(null)}
+      >
+        <View style={s.overlay}>
+          <Pressable style={s.scrim} onPress={() => setWhyCard(null)} />
+          <View style={s.sheet}>
+            <View style={s.sheetHeader}>
+              <Text style={s.sheetTitle}>Why you’re seeing this</Text>
+              <Pressable
+                accessibilityLabel="Close"
+                onPress={() => setWhyCard(null)}
+                style={s.close}
+              >
+                <Ionicons name="close" size={22} color={c.text} />
+              </Pressable>
+            </View>
+            {whyCard && (
+              <View style={s.whyBody}>
+                <Text style={s.whyFact}>• Insight type: {whyCard.label}</Text>
+                {!!whyCard.themeName && <Text style={s.whyFact}>• Theme: {whyCard.themeName}</Text>}
+                <Text style={s.whyFact}>
+                  • {whyCard.evidence.length} supporting {whyCard.evidence.length === 1 ? "reflection" : "reflections"}
+                </Text>
+                <Text style={s.whyFact}>
+                  • {new Set(whyCard.evidence.map((note) => note.reference)).size} Scripture {new Set(whyCard.evidence.map((note) => note.reference)).size === 1 ? "reference" : "references"}
+                </Text>
+                <Text style={s.whyFact}>
+                  • Written across {new Set(whyCard.evidence.map((note) => note.createdAt.slice(0, 10))).size} separate {new Set(whyCard.evidence.map((note) => note.createdAt.slice(0, 10))).size === 1 ? "date" : "dates"}
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
     </Screen>
   );
 }
@@ -439,20 +514,18 @@ function FacetBlock({
   type,
   facets,
   setBrowseFocus,
-  c,
   s,
 }: {
   title: string;
   type: "theme" | "book" | "thought";
   facets: GardenFacet[];
   setBrowseFocus: (value: BrowseFocus) => void;
-  c: AppColors;
   s: ReturnType<typeof styles>;
 }) {
   return (
     <View style={s.facetBlock}>
       <Text style={s.facetTitle}>{title}</Text>
-      {facets.slice(0, 5).map((facet) => (
+      {facets.map((facet) => (
         <Pressable
           accessibilityLabel={`Open ${facet.name}`}
           key={facet.name}
@@ -464,7 +537,6 @@ function FacetBlock({
         </Pressable>
       ))}
       {!facets.length && <Text style={s.muted}>Nothing here yet.</Text>}
-      {facets.length > 5 && <Text style={[s.viewAll, { color: c.green }]}>View all {title.toLowerCase()}</Text>}
     </View>
   );
 }
@@ -507,9 +579,8 @@ const styles = (c: AppColors) =>
     emptyCopy: { color: c.muted, textAlign: "center", lineHeight: 20, marginTop: 8 },
     primary: { minHeight: 48, borderRadius: 13, backgroundColor: c.green, alignItems: "center", justifyContent: "center", paddingHorizontal: 18, marginTop: 18 },
     primaryText: { color: c.onAccent, fontWeight: "900" },
-    header: { minHeight: 72, paddingHorizontal: 18, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-    headerTitle: { color: c.text, fontSize: 22, fontWeight: "900" },
-    count: { color: c.muted, fontSize: 12, marginTop: 2 },
+    header: { minHeight: 58, paddingHorizontal: 18, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+    count: { color: c.text, fontSize: 18, fontWeight: "900" },
     reflect: { minHeight: 40, borderRadius: 12, backgroundColor: c.green, flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 12 },
     reflectText: { color: c.onAccent, fontWeight: "900", fontSize: 12 },
     searchRow: { flexDirection: "row", gap: 8, paddingHorizontal: 18, paddingBottom: 10 },
@@ -521,12 +592,13 @@ const styles = (c: AppColors) =>
     segmentActive: { backgroundColor: c.green },
     segmentText: { color: c.muted, fontWeight: "800", fontSize: 12 },
     segmentTextActive: { color: c.onAccent },
-    quickFilters: { gap: 8, paddingHorizontal: 18, paddingTop: 12, paddingBottom: 6 },
+    quickScroll: { flexGrow: 0, minHeight: 60, marginBottom: 4 },
+    quickFilters: { gap: 8, paddingHorizontal: 18, paddingTop: 12, paddingBottom: 12 },
     quick: { minHeight: 36, justifyContent: "center", paddingHorizontal: 12, borderRadius: 18, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line },
     quickActive: { backgroundColor: c.green, borderColor: c.green },
     quickText: { color: c.text, fontSize: 11, fontWeight: "700" },
     quickTextActive: { color: c.onAccent },
-    list: { padding: 18, paddingTop: 6, paddingBottom: 32 },
+    list: { padding: 18, paddingTop: 10, paddingBottom: 32 },
     sectionLabel: { color: c.muted, fontSize: 10, fontWeight: "900", letterSpacing: 1.2, marginTop: 12, marginBottom: 8 },
     card: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: 16, padding: 15, marginBottom: 11 },
     metaRow: { flexDirection: "row", justifyContent: "space-between", gap: 8 },
@@ -564,6 +636,8 @@ const styles = (c: AppColors) =>
     feedback: { flexDirection: "row", justifyContent: "space-between", marginTop: 12 },
     why: { color: c.muted, fontSize: 11, fontWeight: "700" },
     dismiss: { color: c.danger, fontSize: 11, fontWeight: "800" },
+    whyBody: { gap: 10, paddingBottom: 6 },
+    whyFact: { color: c.text, fontSize: 14, lineHeight: 21 },
     overlay: { flex: 1, justifyContent: "flex-end" },
     scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,.45)" },
     sheet: { maxHeight: "80%", backgroundColor: c.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 28, borderWidth: 1, borderColor: c.line },

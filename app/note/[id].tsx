@@ -13,6 +13,7 @@ export default function NoteDetail() {
   const { getNote, deleteNote, markRevisited, markResolved, markPracticed } = useGarden();
   const note = getNote(id);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
   const c = useThemeColors();
   const s = useMemo(() => styles(c), [c]);
   if (!note)
@@ -34,7 +35,14 @@ export default function NoteDetail() {
     deleteNote(note.id);
     router.replace("/garden");
   };
-  const revisit = () => markRevisited(note.id);
+  const showStatusMessage = (message: string) => {
+    setStatusMessage(message);
+    setTimeout(() => setStatusMessage(""), 1800);
+  };
+  const revisit = () => {
+    markRevisited(note.id);
+    showStatusMessage("Marked as revisited");
+  };
   const action = (
     <Pressable
       accessibilityLabel="Edit reflection"
@@ -73,19 +81,32 @@ export default function NoteDetail() {
           </Text>
           <View style={s.statusActions}>
             <Pressable onPress={revisit} style={s.statusButton}>
-              <Text style={s.statusButtonText}>Revisit</Text>
+              <Text style={s.statusButtonText}>Mark as revisited</Text>
             </Pressable>
             {note.group === "Question" && note.status === "open" && (
-              <Pressable onPress={() => markResolved(note.id)} style={s.statusButton}>
+              <Pressable
+                onPress={() => {
+                  markResolved(note.id);
+                  showStatusMessage("Marked resolved");
+                }}
+                style={s.statusButton}
+              >
                 <Text style={s.statusButtonText}>Mark resolved</Text>
               </Pressable>
             )}
             {note.group === "Application" && note.status === "open" && (
-              <Pressable onPress={() => markPracticed(note.id)} style={s.statusButton}>
+              <Pressable
+                onPress={() => {
+                  markPracticed(note.id);
+                  showStatusMessage("Application marked practiced");
+                }}
+                style={s.statusButton}
+              >
                 <Text style={s.statusButtonText}>I practiced this</Text>
               </Pressable>
             )}
           </View>
+          {!!statusMessage && <Text style={s.statusMessage}>{statusMessage}</Text>}
         </View>
         <Text style={s.label}>SCRIPTURE ANCHOR</Text>
         <View style={s.anchor}>
@@ -229,6 +250,7 @@ const styles = (c: AppColors) =>
       paddingHorizontal: 12,
     },
     statusButtonText: { color: c.onAccent, fontWeight: "900", fontSize: 11 },
+    statusMessage: { color: c.green, fontWeight: "800", fontSize: 12, marginTop: 10 },
     delete: {
       height: 48,
       marginTop: 36,

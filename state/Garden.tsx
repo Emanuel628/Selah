@@ -248,12 +248,31 @@ export function GardenProvider({ children }: PropsWithChildren) {
     [user],
   );
 
+  const recordEvent = useCallback(
+    (id: string, eventType: keyof typeof eventName) => {
+      if (!user) return;
+      supabase
+        .from("reflection_events")
+        .insert({
+          user_id: user.id,
+          reflection_id: id,
+          event_type: eventName[eventType],
+          occurred_at: new Date().toISOString(),
+        })
+        .then(
+          ({ error }) =>
+            error && console.warn("Could not record reflection event", error.message),
+        );
+    },
+    [user],
+  );
+
   const updateStatus = useCallback(
     (id: string, status: ReflectionStatus, eventType: keyof typeof eventName) => {
       const now = new Date().toISOString();
       setNotes((current) =>
         current.map((note) =>
-          note.id === id ? { ...note, status, lastRevisitedAt: now, updatedAt: now } : note,
+          note.id === id ? { ...note, status, lastRevisitedAt: now } : note,
         ),
       );
       if (user) {
@@ -266,29 +285,33 @@ export function GardenProvider({ children }: PropsWithChildren) {
             ({ error }) =>
               error && console.warn("Could not update reflection status", error.message),
           );
-        supabase
-          .from("reflection_events")
-          .insert({
-            user_id: user.id,
-            reflection_id: id,
-            event_type: eventName[eventType],
-            occurred_at: now,
-          })
-          .then(
-            ({ error }) =>
-              error && console.warn("Could not record reflection event", error.message),
-          );
+        recordEvent(id, eventType);
       }
     },
-    [user],
+    [user, recordEvent],
   );
 
   const markRevisited = useCallback(
     (id: string) => {
-      const note = notes.find((item) => item.id === id);
-      updateStatus(id, note?.status || "open", "revisited");
+      const now = new Date().toISOString();
+      setNotes((current) =>
+        current.map((note) =>
+          note.id === id ? { ...note, lastRevisitedAt: now } : note,
+        ),
+      );
+      if (user)
+        supabase
+          .from("garden_notes")
+          .update({ last_revisited_at: now })
+          .eq("id", id)
+          .eq("user_id", user.id)
+          .then(
+            ({ error }) =>
+              error && console.warn("Could not mark reflection revisited", error.message),
+          );
+      recordEvent(id, "revisited");
     },
-    [notes, updateStatus],
+    [user, recordEvent],
   );
 
   const markResolved = useCallback(

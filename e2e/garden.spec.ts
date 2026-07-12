@@ -80,6 +80,36 @@ test("Garden uses one compact advanced-filter surface", async ({ page }) => {
   expect(applyBox!.y + applyBox!.height - titleBox!.y).toBeLessThan(500);
 });
 
+test("Garden uses contextual search and unclipped reflection pills", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Reflect on this passage").click();
+  await page.getByLabel("Reflection text").fill("Grace helps me trust and wait with hope.");
+  await page.getByText("Add details").click();
+  await page.getByLabel("Reflection title").fill("Grace and hope");
+  await page.getByText("Add Theme").click();
+  await page.getByText("#Grace", { exact: true }).click();
+  await page.getByText("Done", { exact: true }).click();
+  await page.getByText("Save to Garden").click();
+
+  await expect(page.getByPlaceholder("Search reflections")).toBeVisible();
+  const allPill = page.getByText("All", { exact: true }).first();
+  const firstCard = page.getByText("Grace and hope", { exact: true }).last();
+  await expect(allPill).toBeVisible();
+  await expect(firstCard).toBeVisible();
+  const pillBox = await allPill.boundingBox();
+  const cardBox = await firstCard.boundingBox();
+  expect(pillBox).not.toBeNull();
+  expect(cardBox).not.toBeNull();
+  expect(pillBox!.y + pillBox!.height).toBeLessThan(cardBox!.y);
+
+  await page.getByRole("tab", { name: "Browse" }).click();
+  await expect(page.getByPlaceholder("Search reflections")).toHaveCount(0);
+  await page.getByLabel("Open Grace").click();
+  await expect(page.getByPlaceholder("Search within Grace")).toBeVisible();
+  await page.getByRole("tab", { name: "Insights" }).click();
+  await expect(page.getByPlaceholder(/Search/)).toHaveCount(0);
+});
+
 test("Reading preferences save and persist with confirmation", async ({
   page,
 }) => {
@@ -117,9 +147,12 @@ test("Garden insight and Revisit CTAs avoid duplicate user actions", async ({
   await page.getByRole("tab", { name: "Insights" }).click();
   const insightCards = page.locator("text=STRONG PATTERN").or(page.locator("text=EMERGING PATTERN"));
   await expect(insightCards.first()).toBeVisible();
+  await expect(page.getByText("Why you’re seeing this").first()).toBeVisible();
+  await page.getByText("Why you’re seeing this").first().click();
+  await expect(page.getByText(/supporting reflections?/)).toBeVisible();
+  await page.getByLabel("Close").click();
   const viewEvidenceCount = await page.getByText("View evidence", { exact: true }).count();
-  expect(viewEvidenceCount).toBeGreaterThan(0);
-  expect(viewEvidenceCount).toBeLessThanOrEqual(3);
+  expect(viewEvidenceCount).toBeLessThanOrEqual(1);
 
   await page.getByText("Revisit", { exact: true }).last().click();
   await expect(page.getByText("Worth returning to today", { exact: true })).toBeVisible();
