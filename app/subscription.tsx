@@ -51,6 +51,17 @@ function planFallback(productId: string) {
   );
 }
 
+async function functionErrorMessage(error: unknown) {
+  const context = (error as any)?.context;
+  if (context?.json) {
+    try {
+      const body = await context.json();
+      if (body?.error) return body.error;
+    } catch {}
+  }
+  return (error as Error)?.message || "Something went wrong.";
+}
+
 export default function Subscription() {
   const { user } = useAuth();
   const c = useThemeColors();
@@ -74,7 +85,9 @@ export default function Subscription() {
     );
     setBusyProductId(null);
     if (error) {
-      Alert.alert("Purchase received", error.message);
+      const message = await functionErrorMessage(error);
+      Alert.alert("Purchase received but not activated", message);
+      setMessage(message);
       return;
     }
     setTier("pro");
@@ -171,15 +184,24 @@ export default function Subscription() {
     }
     pendingProductId.current = productId;
     setBusyProductId(productId);
-    await requestPurchase({
-      type: "subs",
-      request: {
-        ios: { sku: productId },
-        apple: { sku: productId },
-        android: { skus: [productId] },
-        google: { skus: [productId] },
-      },
-    });
+    try {
+      await requestPurchase({
+        type: "subs",
+        request: {
+          ios: { sku: productId },
+          apple: { sku: productId },
+          android: { skus: [productId] },
+          google: { skus: [productId] },
+        },
+      });
+    } catch (caught) {
+      setBusyProductId(null);
+      setMessage(
+        caught instanceof Error
+          ? caught.message
+          : "The App Store purchase sheet could not be opened.",
+      );
+    }
   };
 
   const restore = async () => {
@@ -212,7 +234,7 @@ export default function Subscription() {
       );
       setBusyProductId(null);
       if (error) {
-        setMessage(error.message);
+        setMessage(await functionErrorMessage(error));
         return;
       }
       setTier("pro");

@@ -108,10 +108,16 @@ export default function ReflectionGuide() {
           multiline
           value={question}
           onChangeText={setQuestion}
-          placeholder="What are you trying to understand or apply?"
+          placeholder="Ask what you are trying to understand or apply from this passage."
           placeholderTextColor={c.muted}
           style={s.input}
         />
+        <Text style={s.helper}>
+          Reflection Help is meant to read the current passage, consider your
+          question, compare your Garden notes, and return an observation,
+          connection, question, application, and prayer. If AI is unavailable,
+          Selah shows local prompts instead.
+        </Text>
 
         {!!error && <Text style={s.error}>{error}</Text>}
         <Pressable
@@ -135,10 +141,7 @@ export default function ReflectionGuide() {
               {mode === "ai" ? "AI-GUIDED REFLECTION" : "GUIDED REFLECTION"}
             </Text>
             {mode === "fallback" && (
-              <Text style={s.notice}>
-                Local guidance shown because AI generation was unavailable
-                {reason ? ` (${reason})` : ""}.
-              </Text>
+              <Text style={s.notice}>{fallbackMessage(reason)}</Text>
             )}
             <Text style={s.guide}>{guide}</Text>
           </View>
@@ -186,6 +189,12 @@ const styles = (c: AppColors) =>
       textAlignVertical: "top",
       marginBottom: 12,
     },
+    helper: {
+      color: c.muted,
+      fontSize: 11,
+      lineHeight: 17,
+      marginBottom: 12,
+    },
     button: {
       minHeight: 50,
       borderRadius: 14,
@@ -214,3 +223,13 @@ const styles = (c: AppColors) =>
       marginBottom: 10,
     },
   });
+
+function fallbackMessage(reason: string) {
+  if (reason === "openai_401")
+    return "AI is not connected yet because OpenAI rejected the configured API key. Showing local passage prompts for now.";
+  if (reason === "missing_openai_key")
+    return "AI is not connected yet because no OpenAI API key is configured. Showing local passage prompts for now.";
+  return reason
+    ? `AI generation was unavailable (${reason}). Showing local passage prompts for now.`
+    : "AI generation was unavailable. Showing local passage prompts for now.";
+}

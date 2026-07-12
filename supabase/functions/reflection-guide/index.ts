@@ -20,22 +20,48 @@ function env(...names: string[]) {
   return "";
 }
 
-function fallbackGuide(passage: string, notes: Note[]) {
+function fallbackGuide(passage: string, verseText: string, question: string, notes: Note[]) {
   const related = notes
     .filter((note) => `${note.reference || ""}`.includes(passage.split(",")[0]))
     .slice(0, 3);
   const themes = Array.from(
     new Set(notes.map((note) => note.thought_group).filter(Boolean)),
   ).slice(0, 4);
+  const verses = verseText
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 4);
+  const lower = verseText.toLowerCase();
+  const repeated = [
+    "created",
+    "good",
+    "light",
+    "darkness",
+    "spirit",
+    "said",
+    "separated",
+    "called",
+  ].filter((word) => lower.includes(word));
+  const observation = verses.length
+    ? `Observation: Start with the movement of the passage: ${verses.join(" ")}`
+    : `Observation: Read ${passage} slowly and name what the passage directly says.`;
+  const questionLine = question?.trim()
+    ? `Your question: ${question.trim()}\n\nResponse path: answer it from the words on the page first, then compare it with one related Garden note.`
+    : "Question to ask: What does this passage reveal about God before it asks anything of me?";
   return [
-    `Start by reading ${passage} slowly once for meaning and once for response.`,
+    observation,
+    repeated.length
+      ? `Pattern: Pay attention to repeated or loaded words here: ${repeated.join(", ")}. Repetition is usually where the passage is doing its work.`
+      : "Pattern: Look for repeated words, contrasts, commands, promises, and shifts in the scene.",
+    questionLine,
     related.length
-      ? `You have ${related.length} related Garden note${related.length === 1 ? "" : "s"}. Revisit what you already noticed before adding a new thought.`
-      : "You do not have related Garden notes yet. Capture one observation, one question, and one application.",
+      ? `Connection: You have ${related.length} related Garden note${related.length === 1 ? "" : "s"}. Revisit one before adding a new thought.`
+      : "Connection: You do not have related Garden notes yet. Save one observation so future AI guidance can connect this passage to your prior reflections.",
     themes.length
-      ? `Recurring Garden themes to compare: ${themes.join(", ")}.`
-      : "Watch for repeated words, commands, promises, and contrasts in the passage.",
-    "Reflection prompt: What does this passage reveal about God, and what concrete response does it call for today?",
+      ? `Garden themes to compare: ${themes.join(", ")}.`
+      : "Application: Write one concrete response for today, not a broad resolution.",
+    "Prayer: Turn the clearest observation into one sentence of prayer.",
   ].join("\n\n");
 }
 
@@ -62,7 +88,7 @@ Deno.serve(async (req) => {
     if (!openAiKey) {
       return new Response(
         JSON.stringify({
-          guide: fallbackGuide(passage, notes || []),
+          guide: fallbackGuide(passage, verseText, question || "", notes || []),
           mode: "fallback",
           reason: "missing_openai_key",
         }),
@@ -99,7 +125,7 @@ Deno.serve(async (req) => {
       console.error("OpenAI reflection-guide failed", response.status, errorText);
       return new Response(
         JSON.stringify({
-          guide: fallbackGuide(passage, notes || []),
+          guide: fallbackGuide(passage, verseText, question || "", notes || []),
           mode: "fallback",
           reason: `openai_${response.status}`,
         }),
@@ -113,7 +139,7 @@ Deno.serve(async (req) => {
         ?.map((part: any) => part.text)
         ?.filter(Boolean)
         ?.join("\n") ||
-      fallbackGuide(passage, notes || []);
+      fallbackGuide(passage, verseText, question || "", notes || []);
     return new Response(JSON.stringify({ guide, mode: "ai" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

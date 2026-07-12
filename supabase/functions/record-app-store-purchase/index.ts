@@ -102,6 +102,13 @@ function numberDate(value: unknown) {
   return Number.isFinite(num) && num > 0 ? new Date(num).toISOString() : null;
 }
 
+function errorResponse(message: string, status = 400, code = "purchase_error") {
+  return new Response(JSON.stringify({ error: message, code }), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS")
     return new Response("ok", { headers: corsHeaders });
@@ -109,15 +116,13 @@ Deno.serve(async (req) => {
     const { supabase, user } = await requireUser(req);
     const { purchase, productId } = await req.json();
     if (!purchase || !productId)
-      return new Response(JSON.stringify({ error: "Missing purchase" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return errorResponse("Missing purchase", 400, "missing_purchase");
     if (!VALID_PRODUCTS.includes(productId))
-      return new Response(JSON.stringify({ error: "Unknown product ID" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return errorResponse(
+        `Unknown product ID: ${productId}`,
+        400,
+        "unknown_product_id",
+      );
 
     const transactionId =
       purchase?.transactionId ||
@@ -125,10 +130,11 @@ Deno.serve(async (req) => {
       purchase?.purchaseToken ||
       purchase?.purchaseTokenAndroid;
     if (!transactionId)
-      return new Response(JSON.stringify({ error: "Missing transaction ID" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return errorResponse(
+        `Missing transaction ID. Purchase fields: ${Object.keys(purchase || {}).join(", ")}`,
+        400,
+        "missing_transaction_id",
+      );
 
     const apple = await getAppleTransaction(
       String(transactionId),
@@ -181,9 +187,9 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     if (error instanceof Response) return error;
-    return new Response(JSON.stringify({ error: "Purchase could not be recorded" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    const message =
+      error instanceof Error ? error.message : "Purchase could not be recorded";
+    console.error("Purchase could not be recorded", message);
+    return errorResponse(message, 500, "purchase_record_failed");
   }
 });
