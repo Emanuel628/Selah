@@ -85,7 +85,7 @@ test("Reader bookmarks an exact page and Settings changes its color", async ({ p
   await expect(page.getByLabel("Bookmarked")).toBeVisible();
   await page.getByLabel("Open Settings").click();
   await page.getByText("Bookmark Color").click();
-  await page.getByLabel("Rose bookmark color").click();
+  await page.getByRole("radio", { name: "Rose bookmark color", exact: true }).click();
   await expect(page.getByText("Selected", { exact: true })).toBeVisible();
 });
 
@@ -122,6 +122,8 @@ test("Reader Reflect creates a quick Garden reflection", async ({ page }) => {
   await expect(page.getByText("New reflection", { exact: true })).toBeVisible();
   await expect(page.getByText(/Genesis 1:1-/).first()).toBeVisible();
   await page.getByLabel("Reflection text").fill("Light brings order to chaos.");
+  await expect(page.getByLabel("Done writing reflection")).toBeVisible();
+  await page.getByLabel("Done writing reflection").click();
   await page.getByText("Add details").click();
   await page.getByLabel("Reflection title").fill("Creation brings order");
   await page.getByText("Add Theme").click();
@@ -160,6 +162,12 @@ test("Daily Reminders cannot be saved while off", async ({ page }) => {
 
 test("Reader full screen hides navigation and exits on a double tap", async ({ page }) => {
   await page.goto("/");
+  await page.evaluate(() => {
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith("selah.local.highlights."))
+      .forEach((key) => localStorage.removeItem(key));
+  });
+  await page.reload();
   await page.getByLabel("Enter full screen reading").click();
   const reader = page.getByLabel("Full screen Scripture. Double tap to exit.");
   await expect(reader).toBeVisible();
@@ -168,6 +176,11 @@ test("Reader full screen hides navigation and exits on a double tap", async ({ p
     .getByText(/In the beginning God created the heavens and the earth/)
     .last();
   await fullscreenVerse.click();
+  expect(
+    await fullscreenVerse.evaluate(
+      (element) => getComputedStyle(element.parentElement as HTMLElement).backgroundColor,
+    ),
+  ).toBe("rgba(247, 215, 116, 0.38)");
   await fullscreenVerse.click();
   await expect(page.getByLabel("Enter full screen reading")).toBeVisible();
 });
@@ -216,7 +229,18 @@ test("Reader supports verse highlighting", async ({ page }) => {
 test("Settings changes highlight color and saved highlights route works", async ({ page }) => {
   await page.goto("/settings");
   await page.getByText("Highlight Color").click();
-  await page.getByLabel("Rose highlight color").click();
+  await expect(
+    page.getByRole("radio", { name: "Charcoal highlight color", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("radio", { name: "Rose highlight color", exact: true }).click();
+  await page.goto("/settings");
+  await page.getByText("Bookmark Color").click();
+  await expect(
+    page.getByRole("radio", { name: "Rose bookmark color", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("radio", { name: "Charcoal bookmark color", exact: true }),
+  ).toBeVisible();
   await page.goto("/highlights");
   await expect(page.getByText("No highlights yet")).toBeVisible();
 });

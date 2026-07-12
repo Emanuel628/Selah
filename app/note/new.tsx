@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -56,6 +57,7 @@ export default function NoteEditor() {
   const [tagOpen, setTagOpen] = useState(false);
   const [custom, setCustom] = useState("");
   const [guidedOpen, setGuidedOpen] = useState(false);
+  const [bodyFocused, setBodyFocused] = useState(false);
   const [guided, setGuided] = useState({
     notice: "",
     meaning: "",
@@ -130,27 +132,51 @@ export default function NoteEditor() {
       title={existing ? "Edit reflection" : "New reflection"}
       subtitle={reference}
     >
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={s.body}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={s.keyboard}
       >
-        <View style={s.anchor}>
-          <Text style={s.anchorRef}>{reference}</Text>
-          <Text style={s.anchorSub}>{settings.preferredTranslationName}</Text>
-        </View>
-        <Text style={s.prompt}>What stayed with you?</Text>
-        <TextInput
-          accessibilityLabel="Reflection text"
-          multiline
-          autoFocus={!existing}
-          textAlignVertical="top"
-          value={body}
-          onChangeText={setBody}
-          placeholder="Write the thought, question, prayer, or application you want to remember."
-          placeholderTextColor={c.muted}
-          style={s.input}
-        />
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={s.body}
+        >
+          <Pressable
+            accessibilityLabel="Dismiss keyboard"
+            onPress={Keyboard.dismiss}
+            style={s.anchor}
+          >
+            <Text style={s.anchorRef}>{reference}</Text>
+            <Text style={s.anchorSub}>{settings.preferredTranslationName}</Text>
+          </Pressable>
+          <View style={s.promptRow}>
+            <Text style={s.prompt}>What stayed with you?</Text>
+            {bodyFocused && (
+              <Pressable
+                accessibilityLabel="Done writing reflection"
+                onPress={Keyboard.dismiss}
+                style={s.doneTyping}
+              >
+                <Text style={s.doneTypingText}>Done</Text>
+              </Pressable>
+            )}
+          </View>
+          <TextInput
+            accessibilityLabel="Reflection text"
+            multiline
+            autoFocus={!existing}
+            textAlignVertical="top"
+            scrollEnabled={false}
+            blurOnSubmit={false}
+            value={body}
+            onFocus={() => setBodyFocused(true)}
+            onBlur={() => setBodyFocused(false)}
+            onChangeText={setBody}
+            placeholder="Write the thought, question, prayer, or application you want to remember."
+            placeholderTextColor={c.muted}
+            style={s.input}
+          />
         <Pressable onPress={() => setGuidedOpen(true)} style={s.guided}>
           <Ionicons name="help-circle-outline" size={17} color={c.green} />
           <Text style={s.guidedText}>Need help thinking this through?</Text>
@@ -224,7 +250,8 @@ export default function NoteEditor() {
         >
           <Text style={s.saveText}>Save to Garden</Text>
         </Pressable>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <Modal visible={tagOpen} transparent animationType="slide">
         <KeyboardAvoidingView
@@ -315,7 +342,8 @@ export default function NoteEditor() {
 
 const styles = (c: AppColors) =>
   StyleSheet.create({
-    body: { padding: 18, paddingBottom: 38 },
+    keyboard: { flex: 1 },
+    body: { padding: 18, paddingBottom: 180 },
     anchor: {
       backgroundColor: c.surface,
       borderWidth: 1,
@@ -326,9 +354,26 @@ const styles = (c: AppColors) =>
     },
     anchorRef: { color: c.text, fontWeight: "900", fontSize: 16 },
     anchorSub: { color: c.muted, fontSize: 11, marginTop: 4 },
-    prompt: { color: c.text, fontSize: 20, fontWeight: "900", marginBottom: 10 },
+    promptRow: {
+      minHeight: 36,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 12,
+      marginBottom: 10,
+    },
+    prompt: { color: c.text, fontSize: 20, fontWeight: "900", flex: 1 },
+    doneTyping: {
+      minHeight: 34,
+      paddingHorizontal: 13,
+      borderRadius: 17,
+      backgroundColor: c.green,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    doneTypingText: { color: c.onAccent, fontWeight: "900", fontSize: 12 },
     input: {
-      minHeight: 190,
+      minHeight: 146,
       backgroundColor: c.surface,
       borderRadius: 16,
       borderWidth: 1,

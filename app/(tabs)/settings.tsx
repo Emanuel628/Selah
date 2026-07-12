@@ -47,12 +47,14 @@ function Setting({
       <Ionicons name={icon} size={18} color={detailColor || c.muted} />
       <Text style={s.name}>{name}</Text>
       {onChange ? (
-        <Switch
-          value={value}
-          onValueChange={onChange}
-          trackColor={{ false: c.muted, true: c.green }}
-          thumbColor={c.paper}
-        />
+        <View style={s.switchSlot}>
+          <Switch
+            value={value}
+            onValueChange={onChange}
+            trackColor={{ false: c.muted, true: c.green }}
+            thumbColor={c.paper}
+          />
+        </View>
       ) : (
         <>
           <Text
@@ -344,7 +346,7 @@ const styles = (c: AppColors) =>
       marginBottom: 16,
     },
     row: {
-      minHeight: 54,
+      minHeight: 62,
       paddingHorizontal: 14,
       flexDirection: "row",
       alignItems: "center",
@@ -354,6 +356,13 @@ const styles = (c: AppColors) =>
     },
     last: { borderBottomWidth: 0 },
     name: { color: c.text, fontWeight: "600", flex: 1 },
+    switchSlot: {
+      width: 66,
+      minHeight: 58,
+      alignItems: "center",
+      justifyContent: "center",
+      alignSelf: "stretch",
+    },
     detail: { color: c.green, fontSize: 11, maxWidth: 150 },
     message: {
       color: c.muted,

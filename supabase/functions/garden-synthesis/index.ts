@@ -10,8 +10,40 @@ type Note = {
   book_name?: string | null;
 };
 
+const STOP_WORDS = new Set([
+  "the",
+  "and",
+  "for",
+  "you",
+  "are",
+  "that",
+  "with",
+  "from",
+  "this",
+  "have",
+  "what",
+  "when",
+  "where",
+  "there",
+  "they",
+  "your",
+  "about",
+  "into",
+  "unto",
+  "will",
+  "shall",
+]);
+
 const sortCounts = (map: Map<string, number>) =>
   [...map.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+
+function words(text: string) {
+  return text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .split(/\s+/)
+    .filter((word) => word.length > 3 && !STOP_WORDS.has(word));
+}
 
 function countBy(notes: Note[], getValues: (note: Note) => string[]) {
   const counts = new Map<string, number>();
@@ -19,6 +51,44 @@ function countBy(notes: Note[], getValues: (note: Note) => string[]) {
     getValues(note).forEach((value) => counts.set(value, (counts.get(value) || 0) + 1)),
   );
   return sortCounts(counts);
+}
+
+function topTerms(notes: Note[]) {
+  const counts = new Map<string, number>();
+  notes.forEach((note) =>
+    words(`${note.title || ""} ${note.body || ""}`).forEach((word) =>
+      counts.set(word, (counts.get(word) || 0) + 1),
+    ),
+  );
+  return sortCounts(counts).slice(0, 8);
+}
+
+function overlap(a: Note, b: Note) {
+  const source = new Set(words(`${a.title || ""} ${a.body || ""} ${(a.tags || []).join(" ")}`));
+  return words(`${b.title || ""} ${b.body || ""} ${(b.tags || []).join(" ")}`)
+    .reduce((score, word) => score + (source.has(word) ? 1 : 0), 0);
+}
+
+function strongestPair(notes: Note[]) {
+  let best: { a: Note; b: Note; score: number } | null = null;
+  for (let left = 0; left < notes.length; left += 1) {
+    for (let right = left + 1; right < notes.length; right += 1) {
+      const sharedTags = (notes[left].tags || []).filter((tag) =>
+        (notes[right].tags || []).includes(tag),
+      ).length;
+      const sameBook = notes[left].book_name && notes[left].book_name === notes[right].book_name ? 2 : 0;
+      const sameGroup = notes[left].thought_group && notes[left].thought_group === notes[right].thought_group ? 1 : 0;
+      const score = sharedTags * 4 + sameBook + sameGroup + overlap(notes[left], notes[right]);
+      if (!best || score > best.score) best = { a: notes[left], b: notes[right], score };
+    }
+  }
+  return best && best.score > 0 ? best : null;
+}
+
+function compact(note?: Note) {
+  if (!note) return "";
+  const title = note.title || note.body || "Saved reflection";
+  return `${note.reference || "Saved reflection"} — ${title.slice(0, 115)}`;
 }
 
 function synthesize(notes: Note[], purpose: string) {
@@ -40,9 +110,28 @@ function synthesize(notes: Note[], purpose: string) {
   const questions = notes.filter((note) => note.thought_group === "Question");
   const applications = notes.filter((note) => note.thought_group === "Application");
   const connections = notes.filter((note) => note.thought_group === "Connection");
+  const prayers = notes.filter((note) => note.thought_group === "Prayer");
+  const terms = topTerms(notes);
+  const pair = strongestPair(notes);
   const topTag = tags[0]?.[0] || "an emerging theme";
   const topBook = books[0]?.[0] || "your recent reading";
   const topGroup = groups[0]?.[0] || "reflection";
+  const diversity =
+    tags.length >= 4 && books.length >= 3
+      ? "Your Garden is broad: several themes are appearing across multiple books."
+      : tags.length >= 3
+        ? "Your Garden is theme-led right now: a few repeated ideas are carrying most of the pattern."
+        : "Your Garden is still early: the strongest signal is where you keep returning.";
+  const tension =
+    questions.length && applications.length
+      ? "There is a useful tension between questions you are still carrying and applications you have already named."
+      : questions.length
+        ? "Questions are leading the current season; keep them connected to exact passages so they do not become vague."
+        : applications.length
+          ? "Applications are leading the current season; revisit them so insight becomes practice."
+          : prayers.length
+            ? "Prayer is leading the current season; look for what those prayers consistently ask God to form in you."
+            : "Add thought types to sharpen the next synthesis.";
   const action =
     questions[0]?.body
       ? `Revisit this open question: "${questions[0].body.slice(0, 140)}"`
@@ -57,13 +146,26 @@ function synthesize(notes: Note[], purpose: string) {
       : `Your strongest current pattern is #${topTag}, especially around ${topBook}.`;
   return [
     "Pattern",
-    `${graphLine} Your most common thought type is ${topGroup}.`,
+    `${graphLine} Your most common thought type is ${topGroup}. ${diversity}`,
     "",
-    "Meaning",
-    `Selah is seeing where your attention keeps returning, not declaring a final interpretation. Use this as a prompt to compare your own reflections.`,
+    "Strongest connection",
+    pair
+      ? `${compact(pair.a)} appears connected to ${compact(pair.b)}. The connection is based on shared tags, book context, thought type, and repeated wording.`
+      : "No strong note-to-note pair is available yet. Add themes and thought types to create clearer connections.",
+    "",
+    "Recurring language",
+    terms.length
+      ? terms.map(([term, count]) => `${term}${count > 1 ? ` (${count})` : ""}`).join(", ")
+      : "No repeated reflection language is strong enough yet.",
+    "",
+    "Meaning to test",
+    `${tension} Selah is showing where your attention keeps returning, not declaring a final interpretation. Compare the pattern against Scripture before acting on it.`,
     "",
     "Next step",
     action,
+    "",
+    "Reflection practice",
+    "Pick one saved note in the strongest connection and add a follow-up: what changed, what remains unresolved, and what response is concrete enough to revisit.",
   ].join("\n");
 }
 

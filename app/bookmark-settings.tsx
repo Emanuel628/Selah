@@ -2,24 +2,11 @@ import { useMemo } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { DetailScreen } from "@/components/DetailScreen";
+import { MARK_COLORS } from "@/lib/colorOptions";
 import { AppColors } from "@/lib/theme";
 import { useAppSettings } from "@/state/AppSettings";
 import { useThemeColors } from "@/state/useThemeColors";
 
-const COLORS = [
-  ["Honey", "#D4A72C"],
-  ["Sage", "#6F9B75"],
-  ["Forest", "#34745A"],
-  ["Teal", "#3B8C88"],
-  ["Sky", "#5C8FBF"],
-  ["Indigo", "#6268A8"],
-  ["Lavender", "#9274AE"],
-  ["Rose", "#BE7082"],
-  ["Coral", "#D77962"],
-  ["Terracotta", "#B9684E"],
-  ["Plum", "#85506F"],
-  ["Charcoal", "#58605E"],
-] as const;
 export default function BookmarkSettings() {
   const c = useThemeColors();
   const s = useMemo(() => styles(c), [c]);
@@ -39,7 +26,7 @@ export default function BookmarkSettings() {
         </View>
         <Text style={s.label}>COLOR</Text>
         <View style={s.grid}>
-          {COLORS.map(([name, color]) => (
+          {MARK_COLORS.map(([name, color]) => (
             <Pressable
               accessibilityLabel={`${name} bookmark color`}
               accessibilityRole="radio"

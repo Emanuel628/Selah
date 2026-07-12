@@ -63,6 +63,55 @@ export default function Garden() {
     );
     return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
   }, [notes]);
+  const thoughtGroups = useMemo(() => {
+    const buckets = new Map<
+      string,
+      {
+        label: string;
+        type: "theme" | "thought" | "book";
+        count: number;
+        refs: string[];
+      }
+    >();
+    const add = (
+      key: string,
+      type: "theme" | "thought" | "book",
+      reference: string,
+    ) => {
+      const existing = buckets.get(`${type}:${key}`) || {
+        label: key,
+        type,
+        count: 0,
+        refs: [],
+      };
+      existing.count += 1;
+      if (!existing.refs.includes(reference)) existing.refs.push(reference);
+      buckets.set(`${type}:${key}`, existing);
+    };
+    notes.forEach((note) => {
+      if (note.tags[0]) add(note.tags[0], "theme", note.reference);
+      else if (note.group) add(note.group, "thought", note.reference);
+      else add(note.bookName, "book", note.reference);
+    });
+    return [...buckets.values()]
+      .filter((item) => item.count > 0)
+      .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
+      .slice(0, 8);
+  }, [notes]);
+  const openThoughtGroup = (item: (typeof thoughtGroups)[number]) => {
+    setQuery("");
+    if (item.type === "theme") {
+      setTag(item.label);
+      setGroup("All");
+    } else if (item.type === "thought") {
+      setGroup(item.label as ThoughtGroup);
+      setTag("All");
+    } else {
+      setTag("All");
+      setGroup("All");
+      setQuery(item.label);
+    }
+  };
   const reset = () => {
     setGroup("All");
     setTag("All");
@@ -114,6 +163,54 @@ export default function Garden() {
         </View>
       )}
 
+      <View style={s.groupings}>
+        <View style={s.groupingsHeader}>
+          <View>
+            <Text style={s.panelTitle}>Thought groupings</Text>
+            <Text style={s.panelCopy}>Tap a card to gather related reflections.</Text>
+          </View>
+          <Pressable
+            accessibilityLabel="Get Garden insight"
+            onPress={() => router.push("/garden-insights" as any)}
+            style={s.insightButton}
+          >
+            <Ionicons name="sparkles-outline" size={15} color={c.onAccent} />
+            <Text style={s.insightText}>Insight</Text>
+          </Pressable>
+        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={s.groupingCards}
+        >
+          {thoughtGroups.map((item) => (
+            <Pressable
+              accessibilityLabel={`Open ${item.label} thought group`}
+              key={`${item.type}:${item.label}`}
+              onPress={() => openThoughtGroup(item)}
+              style={s.groupingCard}
+            >
+              <Text style={s.groupingType}>
+                {item.type === "theme"
+                  ? "THEME"
+                  : item.type === "thought"
+                    ? "THOUGHT"
+                    : "BOOK"}
+              </Text>
+              <Text style={s.groupingTitle} numberOfLines={1}>
+                {item.type === "theme" ? `#${item.label}` : item.label}
+              </Text>
+              <Text style={s.groupingCount}>
+                {item.count} {item.count === 1 ? "reflection" : "reflections"}
+              </Text>
+              <Text style={s.groupingRefs} numberOfLines={2}>
+                {item.refs.slice(0, 3).join(" · ")}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
+
       {notes.length >= 3 && (
         <View style={s.themePanel}>
           <View style={s.panelHeader}>
@@ -122,7 +219,10 @@ export default function Garden() {
               <Text style={s.panelCopy}>Patterns from your saved reflections.</Text>
             </View>
             {notes.length >= 6 && (
-              <Pressable onPress={() => router.push("/garden-insights" as any)}>
+              <Pressable
+                accessibilityLabel="Open Garden insights"
+                onPress={() => router.push("/garden-insights" as any)}
+              >
                 <Text style={s.panelLink}>Insights</Text>
               </Pressable>
             )}
@@ -298,6 +398,43 @@ const styles = (c: AppColors) =>
     themeName: { color: c.text, fontWeight: "800" },
     themeCount: { color: c.muted, fontSize: 11 },
     muted: { color: c.muted, fontSize: 12 },
+    groupings: { marginHorizontal: 18, marginTop: 8, marginBottom: 10 },
+    groupingsHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 12,
+      marginBottom: 10,
+    },
+    insightButton: {
+      minHeight: 38,
+      paddingHorizontal: 11,
+      borderRadius: 12,
+      backgroundColor: c.green,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+    },
+    insightText: { color: c.onAccent, fontWeight: "900", fontSize: 11 },
+    groupingCards: { gap: 10, paddingRight: 2 },
+    groupingCard: {
+      width: 172,
+      minHeight: 118,
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.line,
+      borderRadius: 16,
+      padding: 13,
+    },
+    groupingType: {
+      color: c.gold,
+      fontSize: 9,
+      fontWeight: "900",
+      letterSpacing: 1,
+    },
+    groupingTitle: { color: c.text, fontWeight: "900", fontSize: 15, marginTop: 8 },
+    groupingCount: { color: c.green, fontWeight: "800", fontSize: 11, marginTop: 6 },
+    groupingRefs: { color: c.muted, fontSize: 10, lineHeight: 15, marginTop: 7 },
     connections: { minHeight: 40, flexDirection: "row", alignItems: "center", gap: 7, marginTop: 8 },
     connectionsText: { color: c.green, fontWeight: "900" },
     tools: { flexDirection: "row", gap: 8, paddingHorizontal: 18, paddingTop: 8, paddingBottom: 10 },

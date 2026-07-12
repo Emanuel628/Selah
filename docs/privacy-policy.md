@@ -24,8 +24,8 @@ passages or notes.
 
 When you use guided reflection or synthesis features, Selah analyzes the current
 passage, your question, and relevant Garden notes with deterministic in-app and
-server-side algorithms. Selah does not send this content to OpenAI or another
-third-party AI model for these features.
+server-side algorithms. Selah does not send this content to outside generation
+services for these features.
 
 ## Payments
 

@@ -369,6 +369,16 @@ export default function Read() {
     if (now - lastTap.current < 350) setReaderFullscreen(false);
     lastTap.current = now;
   };
+  const handleFullscreenVersePress = (verse: number) => {
+    const now = Date.now();
+    if (now - lastTap.current < 350) {
+      setReaderFullscreen(false);
+      lastTap.current = 0;
+      return;
+    }
+    lastTap.current = now;
+    void toggleSingleVerseHighlight(verse);
+  };
   const onTouchEnd = (event: GestureResponderEvent) => {
     if (activeHighlight) {
       void finishHighlight();
@@ -429,9 +439,7 @@ export default function Read() {
             <Pressable
               accessibilityLabel={`Verse ${verse.number}`}
               key={verse.number}
-              onPress={() => {
-                handleFullscreenTap();
-              }}
+              onPress={() => handleFullscreenVersePress(verse.number)}
               onLongPress={() => void handleVerseLongPress(verse.number)}
               onPressOut={() => {
                 if (activeHighlightRef.current) void finishHighlight();
@@ -445,12 +453,6 @@ export default function Read() {
               style={highlightStyle(verse.number)}
             >
               <Text
-              onPress={() => {
-                handleFullscreenTap();
-              }}
-              {...(Platform.OS === "web"
-                ? ({ onDoubleClick: () => setReaderFullscreen(false) } as object)
-                : {})}
               style={[
                 s.verse,
                 {

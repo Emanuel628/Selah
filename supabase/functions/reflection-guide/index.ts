@@ -11,6 +11,23 @@ type Note = {
 const STOP_WORDS = new Set([
   "the",
   "and",
+  "for",
+  "you",
+  "are",
+  "but",
+  "not",
+  "his",
+  "her",
+  "him",
+  "was",
+  "had",
+  "has",
+  "into",
+  "over",
+  "under",
+  "upon",
+  "about",
+  "again",
   "that",
   "with",
   "from",
@@ -26,6 +43,11 @@ const STOP_WORDS = new Set([
   "their",
   "there",
   "when",
+  "what",
+  "which",
+  "because",
+  "before",
+  "after",
 ]);
 
 function words(text: string) {
@@ -42,6 +64,61 @@ function topTerms(text: string, limit = 7) {
   return [...counts.entries()]
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .slice(0, limit);
+}
+
+function sentences(text: string) {
+  return text
+    .replace(/\s+/g, " ")
+    .split(/(?<=[.!?])\s+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function repeatedPhrases(text: string, size = 2, limit = 4) {
+  const source = words(text);
+  const counts = new Map<string, number>();
+  for (let index = 0; index <= source.length - size; index += 1) {
+    const phrase = source.slice(index, index + size).join(" ");
+    counts.set(phrase, (counts.get(phrase) || 0) + 1);
+  }
+  return [...counts.entries()]
+    .filter(([, count]) => count > 1)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, limit)
+    .map(([phrase, count]) => `${phrase} (${count})`);
+}
+
+function detectMovement(lines: string[]) {
+  const joined = lines.join(" ").toLowerCase();
+  const signals = [
+    ["created", "creation/order"],
+    ["said", "speech/command"],
+    ["good", "approval/goodness"],
+    ["called", "naming/identity"],
+    ["blessed", "blessing"],
+    ["covenant", "covenant promise"],
+    ["believe", "trust"],
+    ["repent", "turning"],
+    ["love", "love"],
+    ["forgive", "forgiveness"],
+    ["pray", "prayer"],
+    ["fear not", "comfort/courage"],
+  ]
+    .filter(([signal]) => joined.includes(signal))
+    .map(([, label]) => label);
+  return [...new Set(signals)].slice(0, 5);
+}
+
+function classifyQuestion(question: string) {
+  const clean = question.trim().toLowerCase();
+  if (!clean) return "";
+  if (/\b(should|do i|how do|apply|practice|respond)\b/.test(clean))
+    return "application";
+  if (/\b(why|mean|meaning|understand|interpret)\b/.test(clean))
+    return "interpretation";
+  if (/\b(where|when|who|context|history)\b/.test(clean)) return "context";
+  if (/\b(pray|feel|worry|fear|hope|trust)\b/.test(clean)) return "prayer";
+  return "reflection";
 }
 
 function overlapScore(a: string, b: string) {
@@ -71,6 +148,10 @@ function buildGuide(passage: string, verseText: string, question: string, notes:
     .map((line) => line.trim())
     .filter(Boolean);
   const terms = topTerms(verseText);
+  const phrases = repeatedPhrases(verseText);
+  const passageSentences = sentences(verseText);
+  const movementSignals = detectMovement(verseLines);
+  const questionKind = classifyQuestion(question);
   const related = relatedNotes(passage, verseText, notes);
   const questionNotes = notes.filter((note) => note.thought_group === "Question").slice(0, 2);
   const applicationNotes = notes
@@ -84,8 +165,11 @@ function buildGuide(passage: string, verseText: string, question: string, notes:
   const termLine = terms.length
     ? `Repeated or loaded words: ${terms.map(([word, count]) => `${word}${count > 1 ? ` (${count})` : ""}`).join(", ")}. These are likely the best starting points for reflection.`
     : "Look for repeated words, contrasts, commands, promises, and changes in speaker or scene.";
+  const phraseLine = phrases.length
+    ? `Repeated phrase patterns: ${phrases.join(", ")}. Repetition usually marks emphasis or structure.`
+    : `Structural clues: ${movementSignals.length ? movementSignals.join(", ") : "speaker, action, contrast, command, promise, and response"}.`;
   const questionLine = question?.trim()
-    ? `Your question: ${question.trim()}\nA good next step is to answer it from the passage first, then compare it with one related Garden reflection.`
+    ? `Your question appears to be a ${questionKind || "reflection"} question: ${question.trim()}\nAnswer it in this order: (1) what the passage explicitly says, (2) what the surrounding context allows, (3) what your Garden history is showing you, and (4) one faithful next response.`
     : "Question to ask: What does this passage reveal about God, people, creation, sin, promise, or response?";
   const connectionLine = related.length
     ? `From your Garden: ${related
@@ -105,21 +189,32 @@ function buildGuide(passage: string, verseText: string, question: string, notes:
           .filter(Boolean)
           .join("\n")
       : "Response: write one concrete response, practice, or prayer. Keep it small enough to revisit later.";
+  const strongestLine = passageSentences.length
+    ? `Anchor sentence: "${passageSentences.sort((a, b) => overlapScore(b, verseText) - overlapScore(a, verseText))[0].slice(0, 180)}"`
+    : "Anchor sentence: choose the verse or phrase that carries the main thought.";
   return [
     "OBSERVE",
     movement,
     termLine,
+    phraseLine,
+    strongestLine,
     "",
-    "CONNECT",
+    "INTERPRET CAREFULLY",
+    "Do not jump straight to a personal application. First identify the subject, action, repeated words, and whether the text is describing, commanding, promising, warning, or praising.",
+    movementSignals.length
+      ? `Likely emphasis markers: ${movementSignals.join(", ")}. Use these as questions, not automatic conclusions.`
+      : "No single emphasis marker dominates, so compare the beginning and ending of the passage.",
+    "",
+    "CONNECT WITH YOUR GARDEN",
     connectionLine,
     groups.length ? `Thought types already present in your Garden: ${groups.join(", ")}.` : "No thought-type pattern yet.",
     "",
-    "QUESTION",
+    "QUESTION TO WORK",
     questionLine,
     "",
     "RESPOND",
     revisitLine,
-    "Prayer prompt: turn the clearest observation into one honest sentence of prayer.",
+    "Write one sentence each: observation, interpretation, connection, response. Save whichever one you most need to remember.",
   ].join("\n");
 }
 

@@ -28,15 +28,15 @@ export default function GardenInsights() {
   const insights = useMemo(() => buildGardenInsights(notes), [notes]);
   const [synthesis, setSynthesis] = useState("");
   const [synthesisMode, setSynthesisMode] = useState<"algorithm" | "">("");
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiError, setAiError] = useState("");
+  const [synthesisLoading, setSynthesisLoading] = useState(false);
+  const [synthesisError, setSynthesisError] = useState("");
   const generateSynthesis = async () => {
     if (!user) {
-      setAiError("Sign in to generate Garden synthesis.");
+      setSynthesisError("Sign in to generate Garden synthesis.");
       return;
     }
-    setAiLoading(true);
-    setAiError("");
+    setSynthesisLoading(true);
+    setSynthesisError("");
     setSynthesis("");
     setSynthesisMode("");
     try {
@@ -45,17 +45,17 @@ export default function GardenInsights() {
         { body: { purpose: "insights" } },
       );
       if (error) {
-        setAiError(error.message);
+        setSynthesisError(error.message);
         return;
       }
       setSynthesis(data?.synthesis || "No synthesis was returned.");
       setSynthesisMode(data?.mode || "algorithm");
     } catch (caught) {
-      setAiError(
+      setSynthesisError(
         caught instanceof Error ? caught.message : "Could not generate synthesis.",
       );
     } finally {
-      setAiLoading(false);
+      setSynthesisLoading(false);
     }
   };
   return (
@@ -80,21 +80,21 @@ export default function GardenInsights() {
           <Text style={s.eyebrow}>SYNTHESIS</Text>
           <Text style={s.summary}>{insights.summary}</Text>
           <Text style={s.prompt}>{insights.prompt}</Text>
-          {!!aiError && <Text style={s.error}>{aiError}</Text>}
+          {!!synthesisError && <Text style={s.error}>{synthesisError}</Text>}
           {!!synthesis && (
-            <View style={s.aiBox}>
-              <Text style={s.aiLabel}>
+            <View style={s.synthesisBox}>
+              <Text style={s.synthesisLabel}>
                 {synthesisMode === "algorithm" ? "ALGORITHMIC SYNTHESIS" : "GARDEN SYNTHESIS"}
               </Text>
-              <Text style={s.aiText}>{synthesis}</Text>
+              <Text style={s.synthesisText}>{synthesis}</Text>
             </View>
           )}
           <Pressable
-            disabled={aiLoading}
+            disabled={synthesisLoading}
             onPress={generateSynthesis}
-            style={[s.guideButton, aiLoading && s.disabled]}
+            style={[s.guideButton, synthesisLoading && s.disabled]}
           >
-            {aiLoading ? (
+            {synthesisLoading ? (
               <ActivityIndicator color={c.onAccent} />
             ) : (
               <>
@@ -251,21 +251,20 @@ const styles = (c: AppColors) =>
     disabled: { opacity: 0.55 },
     guideText: { color: c.onAccent, fontWeight: "900", fontSize: 12 },
     error: { color: c.danger, fontSize: 12, marginTop: 10 },
-    aiBox: {
+    synthesisBox: {
       borderTopWidth: 1,
       borderColor: c.line,
       marginTop: 14,
       paddingTop: 12,
     },
-    aiLabel: {
+    synthesisLabel: {
       color: c.gold,
       fontSize: 9,
       fontWeight: "900",
       letterSpacing: 1,
       marginBottom: 6,
     },
-    aiNotice: { color: c.muted, fontSize: 11, lineHeight: 17, marginBottom: 7 },
-    aiText: { color: c.text, fontSize: 12, lineHeight: 19 },
+    synthesisText: { color: c.text, fontSize: 12, lineHeight: 19 },
     section: {
       backgroundColor: c.surface,
       borderWidth: 1,

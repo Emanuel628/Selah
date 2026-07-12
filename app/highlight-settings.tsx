@@ -2,22 +2,10 @@ import { useMemo } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { DetailScreen } from "@/components/DetailScreen";
+import { MARK_COLORS } from "@/lib/colorOptions";
 import { AppColors } from "@/lib/theme";
 import { useAppSettings } from "@/state/AppSettings";
 import { useThemeColors } from "@/state/useThemeColors";
-
-const COLORS = [
-  ["Gold", "#F7D774"],
-  ["Lemon", "#FCE588"],
-  ["Sage", "#B8D8A8"],
-  ["Mint", "#A8E6CF"],
-  ["Sky", "#A7D8F0"],
-  ["Lavender", "#CDB7F6"],
-  ["Rose", "#F8BBD0"],
-  ["Coral", "#F4A896"],
-  ["Peach", "#FFD1A9"],
-  ["Stone", "#CFC7B8"],
-] as const;
 
 export default function HighlightSettings() {
   const c = useThemeColors();
@@ -39,7 +27,7 @@ export default function HighlightSettings() {
         </View>
         <Text style={s.label}>COLOR</Text>
         <View style={s.grid}>
-          {COLORS.map(([name, color]) => (
+          {MARK_COLORS.map(([name, color]) => (
             <Pressable
               accessibilityLabel={`${name} highlight color`}
               accessibilityRole="radio"

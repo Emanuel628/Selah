@@ -71,32 +71,32 @@ export default function KnowledgeGraph() {
             </Text>
           </View>
         </View>
-        <View style={s.aiCard}>
-          <Text style={s.aiTitle}>Connection summary</Text>
-          <Text style={s.aiSubtext}>
+        <View style={s.summaryCard}>
+          <Text style={s.summaryTitle}>Connection summary</Text>
+          <Text style={s.summarySubtext}>
             Generate a concise explanation of the strongest connections in your
             Garden using Selah's built-in pattern engine.
           </Text>
           {!!error && <Text style={s.error}>{error}</Text>}
           {!!synthesis && (
-            <View style={s.aiResult}>
-              <Text style={s.aiLabel}>
+            <View style={s.summaryResult}>
+              <Text style={s.summaryLabel}>
                 {mode === "algorithm" ? "ALGORITHMIC CONNECTION SUMMARY" : "CONNECTION SUMMARY"}
               </Text>
-              <Text style={s.aiText}>{synthesis}</Text>
+              <Text style={s.summaryText}>{synthesis}</Text>
             </View>
           )}
           <Pressable
             disabled={loading}
             onPress={explainGraph}
-            style={[s.aiButton, loading && s.disabled]}
+            style={[s.summaryButton, loading && s.disabled]}
           >
             {loading ? (
               <ActivityIndicator color={c.onAccent} />
             ) : (
               <>
                 <Ionicons name="sparkles-outline" size={17} color={c.onAccent} />
-                <Text style={s.aiButtonText}>Explain Connections</Text>
+                <Text style={s.summaryButtonText}>Explain Connections</Text>
               </>
             )}
           </Pressable>
@@ -214,7 +214,7 @@ const styles = (c: AppColors) =>
     },
     emptyTitle: { color: c.text, fontWeight: "800" },
     emptyText: { color: c.muted, fontSize: 12, lineHeight: 18, marginTop: 5 },
-    aiCard: {
+    summaryCard: {
       backgroundColor: c.surface,
       borderWidth: 1,
       borderColor: c.line,
@@ -222,25 +222,24 @@ const styles = (c: AppColors) =>
       padding: 14,
       marginBottom: 12,
     },
-    aiTitle: { color: c.text, fontWeight: "800" },
-    aiSubtext: { color: c.muted, fontSize: 11, lineHeight: 17, marginTop: 4 },
+    summaryTitle: { color: c.text, fontWeight: "800" },
+    summarySubtext: { color: c.muted, fontSize: 11, lineHeight: 17, marginTop: 4 },
     error: { color: c.danger, fontSize: 12, marginTop: 10 },
-    aiResult: {
+    summaryResult: {
       borderTopWidth: 1,
       borderColor: c.line,
       marginTop: 12,
       paddingTop: 12,
     },
-    aiLabel: {
+    summaryLabel: {
       color: c.gold,
       fontSize: 9,
       fontWeight: "900",
       letterSpacing: 1,
       marginBottom: 6,
     },
-    aiNotice: { color: c.muted, fontSize: 11, lineHeight: 17, marginBottom: 7 },
-    aiText: { color: c.text, fontSize: 12, lineHeight: 19 },
-    aiButton: {
+    summaryText: { color: c.text, fontSize: 12, lineHeight: 19 },
+    summaryButton: {
       minHeight: 44,
       borderRadius: 12,
       backgroundColor: c.green,
@@ -251,5 +250,5 @@ const styles = (c: AppColors) =>
       marginTop: 12,
     },
     disabled: { opacity: 0.55 },
-    aiButtonText: { color: c.onAccent, fontWeight: "900", fontSize: 12 },
+    summaryButtonText: { color: c.onAccent, fontWeight: "900", fontSize: 12 },
   });
