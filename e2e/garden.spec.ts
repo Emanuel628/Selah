@@ -91,3 +91,37 @@ test("Reading preferences save and persist with confirmation", async ({
   await page.reload();
   await expect(page.getByText(/22 pt/)).toBeVisible();
 });
+
+test("Garden insight and Revisit CTAs avoid duplicate user actions", async ({
+  page,
+}) => {
+  const notes = [
+    ["Grace question", "How does grace help me trust when the outcome is unclear?", "Question"],
+    ["Grace interpretation", "Grace means I can depend on God before I see the outcome.", "Interpretation"],
+    ["Grace application", "Practice trust by praying before defending myself.", "Application"],
+  ] as const;
+  for (const [title, body, type] of notes) {
+    await page.goto("/");
+    await page.getByLabel("Reflect on this passage").click();
+    await page.getByLabel("Reflection text").fill(body);
+    await page.getByText("Add details").click();
+    await page.getByLabel("Reflection title").fill(title);
+    await page.getByText(type, { exact: true }).last().click();
+    await page.getByText("Add Theme").click();
+    await page.getByText("#Grace", { exact: true }).click();
+    await page.getByText("Done", { exact: true }).click();
+    await page.getByText("Save to Garden").click();
+    await expect(page).toHaveURL(/\/garden$/);
+  }
+
+  await page.getByRole("tab", { name: "Insights" }).click();
+  const insightCards = page.locator("text=STRONG PATTERN").or(page.locator("text=EMERGING PATTERN"));
+  await expect(insightCards.first()).toBeVisible();
+  const viewEvidenceCount = await page.getByText("View evidence", { exact: true }).count();
+  expect(viewEvidenceCount).toBeGreaterThan(0);
+  expect(viewEvidenceCount).toBeLessThanOrEqual(3);
+
+  await page.getByText("Revisit", { exact: true }).last().click();
+  await expect(page.getByText("Worth returning to today", { exact: true })).toBeVisible();
+  await expect(page.getByText("Mark resolved", { exact: true })).toHaveCount(0);
+});

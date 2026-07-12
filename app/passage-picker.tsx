@@ -29,7 +29,7 @@ export default function PassagePicker() {
   const settings = useAppSettings();
   const { width, height } = useWindowDimensions();
   const c = useThemeColors();
-  const s = useMemo(() => styles(c), [c]);
+  const s = useMemo(() => styles(c, settings.bookmarkColor), [c, settings.bookmarkColor]);
   const [books, setBooks] = useState<Book[]>([]);
   const [selected, setSelected] = useState<Book | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
@@ -97,15 +97,29 @@ export default function PassagePicker() {
           renderItem={({ item }) => (
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel={`${item.name}${item.id === settings.currentBookId ? " current book" : ""}`}
               onPress={() => setSelected(item)}
-              style={s.bookRow}
+              style={[
+                s.bookRow,
+                item.id === settings.currentBookId && s.activeBookRow,
+              ]}
             >
-              <View>
+              <View style={s.bookCopyRow}>
+                {item.id === settings.currentBookId && (
+                  <Ionicons
+                    name="bookmark"
+                    size={18}
+                    color={settings.bookmarkColor}
+                    style={s.currentBookMark}
+                  />
+                )}
+                <View>
                 <Text style={s.bookName}>{item.name}</Text>
                 <Text style={s.bookMeta}>
                   {item.numberOfChapters}{" "}
                   {item.numberOfChapters === 1 ? "chapter" : "chapters"}
                 </Text>
+                </View>
               </View>
               <Ionicons name="chevron-forward" size={18} color={c.muted} />
             </Pressable>
@@ -145,7 +159,7 @@ export default function PassagePicker() {
                       s.chapterButton,
                       selected.id === settings.currentBookId &&
                         number === settings.currentChapter &&
-                        s.active,
+                        s.activeLocation,
                     ]}
                   >
                     <Text
@@ -153,7 +167,7 @@ export default function PassagePicker() {
                         s.buttonText,
                         selected.id === settings.currentBookId &&
                           number === settings.currentChapter &&
-                          s.activeText,
+                          s.activeLocationText,
                       ]}
                     >
                       {number}
@@ -186,7 +200,7 @@ export default function PassagePicker() {
                           selected.id === settings.currentBookId &&
                             selectedChapter === settings.currentChapter &&
                             index + 1 === settings.currentPage &&
-                            s.active,
+                            s.activeLocation,
                         ]}
                       >
                         <Text
@@ -195,7 +209,7 @@ export default function PassagePicker() {
                             selected.id === settings.currentBookId &&
                               selectedChapter === settings.currentChapter &&
                               index + 1 === settings.currentPage &&
-                              s.activeText,
+                              s.activeLocationText,
                           ]}
                         >
                           {index + 1}
@@ -206,7 +220,7 @@ export default function PassagePicker() {
                             selected.id === settings.currentBookId &&
                               selectedChapter === settings.currentChapter &&
                               index + 1 === settings.currentPage &&
-                              s.activeText,
+                              s.activeLocationText,
                           ]}
                         >
                           vv. {page[0]?.number}–{page[page.length - 1]?.number}
@@ -223,7 +237,7 @@ export default function PassagePicker() {
     </DetailScreen>
   );
 }
-const styles = (c: AppColors) =>
+const styles = (c: AppColors, bookmarkColor: string) =>
   StyleSheet.create({
     state: { padding: 30, alignItems: "center", gap: 10 },
     muted: { color: c.muted },
@@ -235,7 +249,16 @@ const styles = (c: AppColors) =>
       justifyContent: "space-between",
       borderBottomWidth: 1,
       borderColor: c.line,
+      paddingHorizontal: 4,
+      borderRadius: 12,
     },
+    activeBookRow: {
+      backgroundColor: `${bookmarkColor}1F`,
+      borderColor: bookmarkColor,
+      borderBottomWidth: 1,
+    },
+    bookCopyRow: { flexDirection: "row", alignItems: "center", flex: 1 },
+    currentBookMark: { marginRight: 9 },
     bookName: { color: c.text, fontWeight: "600" },
     bookMeta: { color: c.muted, fontSize: 10, marginTop: 3 },
     chapterView: { padding: 18, paddingBottom: 36 },
@@ -282,8 +305,12 @@ const styles = (c: AppColors) =>
       alignItems: "center",
       justifyContent: "center",
     },
-    active: { backgroundColor: c.green },
+    activeLocation: {
+      backgroundColor: `${bookmarkColor}2B`,
+      borderColor: bookmarkColor,
+      borderWidth: 2,
+    },
     buttonText: { color: c.text, fontWeight: "700" },
     range: { color: c.muted, fontSize: 9, marginTop: 3 },
-    activeText: { color: c.onAccent },
+    activeLocationText: { color: c.text, fontWeight: "900" },
   });

@@ -363,22 +363,24 @@ export default function Garden() {
                   >
                     <Text style={s.insightPrimaryText}>{card.actionLabel}</Text>
                   </Pressable>
-                  <Pressable
-                    onPress={() => {
-                      setBrowseFocus({
-                        type: "theme",
-                        facet: {
-                          name: "Evidence",
-                          count: card.evidence.length,
-                          notes: card.evidence,
-                        },
-                      });
-                      setView("Browse");
-                    }}
-                    style={s.insightSecondary}
-                  >
-                    <Text style={s.insightSecondaryText}>View evidence</Text>
-                  </Pressable>
+                  {card.actionLabel !== "View evidence" && (
+                    <Pressable
+                      onPress={() => {
+                        setBrowseFocus({
+                          type: "theme",
+                          facet: {
+                            name: "Evidence",
+                            count: card.evidence.length,
+                            notes: card.evidence,
+                          },
+                        });
+                        setView("Browse");
+                      }}
+                      style={s.insightSecondary}
+                    >
+                      <Text style={s.insightSecondaryText}>View evidence</Text>
+                    </Pressable>
+                  )}
                 </View>
                 <View style={s.feedback}>
                   <Text style={s.why}>Why you’re seeing this</Text>

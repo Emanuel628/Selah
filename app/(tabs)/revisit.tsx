@@ -105,7 +105,7 @@ function buildQueue(notes: GardenNote[]): RevisitItem[] {
       subtitle: unfinished.reference,
       body: unfinished.body,
       action:
-        unfinished.group === "Question" ? "Mark resolved" : "I practiced this",
+        unfinished.group === "Question" ? "Review question" : "Review application",
       note: unfinished,
     });
 

@@ -57,7 +57,6 @@ export default function NoteEditor() {
   const [tagOpen, setTagOpen] = useState(false);
   const [custom, setCustom] = useState("");
   const [guidedOpen, setGuidedOpen] = useState(false);
-  const [bodyFocused, setBodyFocused] = useState(false);
   const [guided, setGuided] = useState({
     notice: "",
     meaning: "",
@@ -152,15 +151,6 @@ export default function NoteEditor() {
           </Pressable>
           <View style={s.promptRow}>
             <Text style={s.prompt}>What stayed with you?</Text>
-            {bodyFocused && (
-              <Pressable
-                accessibilityLabel="Done writing reflection"
-                onPress={Keyboard.dismiss}
-                style={s.doneTyping}
-              >
-                <Text style={s.doneTypingText}>Done</Text>
-              </Pressable>
-            )}
           </View>
           <TextInput
             accessibilityLabel="Reflection text"
@@ -170,8 +160,6 @@ export default function NoteEditor() {
             scrollEnabled={false}
             blurOnSubmit={false}
             value={body}
-            onFocus={() => setBodyFocused(true)}
-            onBlur={() => setBodyFocused(false)}
             onChangeText={setBody}
             placeholder="Write the thought, question, prayer, or application you want to remember."
             placeholderTextColor={c.muted}
@@ -363,15 +351,6 @@ const styles = (c: AppColors) =>
       marginBottom: 10,
     },
     prompt: { color: c.text, fontSize: 20, fontWeight: "900", flex: 1 },
-    doneTyping: {
-      minHeight: 34,
-      paddingHorizontal: 13,
-      borderRadius: 17,
-      backgroundColor: c.green,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    doneTypingText: { color: c.onAccent, fontWeight: "900", fontSize: 12 },
     input: {
       minHeight: 146,
       backgroundColor: c.surface,

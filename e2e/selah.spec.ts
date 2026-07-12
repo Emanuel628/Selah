@@ -122,8 +122,6 @@ test("Reader Reflect creates a quick Garden reflection", async ({ page }) => {
   await expect(page.getByText("New reflection", { exact: true })).toBeVisible();
   await expect(page.getByText(/Genesis 1:1-/).first()).toBeVisible();
   await page.getByLabel("Reflection text").fill("Light brings order to chaos.");
-  await expect(page.getByLabel("Done writing reflection")).toBeVisible();
-  await page.getByLabel("Done writing reflection").click();
   await page.getByText("Add details").click();
   await page.getByLabel("Reflection title").fill("Creation brings order");
   await page.getByText("Add Theme").click();
@@ -134,6 +132,29 @@ test("Reader Reflect creates a quick Garden reflection", async ({ page }) => {
   await page.getByText("Save to Garden").click();
   await expect(page).toHaveURL(/\/garden$/);
   await expect(page.getByText("Creation brings order", { exact: true }).last()).toBeVisible();
+});
+
+test("Find passage shows the exact current book, chapter, and page with bookmark color", async ({
+  page,
+}) => {
+  await page.goto("/passage-picker");
+  const currentBook = page.getByLabel("Genesis current book");
+  await expect(currentBook).toBeVisible({ timeout: 20000 });
+  expect(await currentBook.evaluate((element) => getComputedStyle(element).borderColor)).toBe(
+    "rgb(212, 167, 44)",
+  );
+  await currentBook.click();
+  const currentChapter = page.getByLabel("Genesis chapter 1", { exact: true });
+  await expect(currentChapter).toBeVisible();
+  expect(
+    await currentChapter.evaluate((element) => getComputedStyle(element).borderColor),
+  ).toBe("rgb(212, 167, 44)");
+  await currentChapter.click();
+  const currentPage = page.getByLabel("Genesis chapter 1 page 1", { exact: true });
+  await expect(currentPage).toBeVisible({ timeout: 20000 });
+  expect(await currentPage.evaluate((element) => getComputedStyle(element).borderColor)).toBe(
+    "rgb(212, 167, 44)",
+  );
 });
 
 test("Search finds verse text across Scripture", async ({ page }) => {
