@@ -13,6 +13,7 @@ Deno.serve(async (req) => {
         subscription_status: "canceled",
         subscription_cancel_at_period_end: true,
         subscription_product_id: null,
+        subscription_expires_at: null,
         trial_ends_at: null,
       })
       .eq("id", user.id);

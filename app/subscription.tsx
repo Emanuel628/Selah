@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+﻿import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -10,7 +10,13 @@ import {
   Text,
   View,
 } from "react-native";
-import { useIAP, type ProductSubscription, type Purchase } from "expo-iap";
+import {
+  getActiveSubscriptions as getNativeActiveSubscriptions,
+  useIAP,
+  type ActiveSubscription,
+  type ProductSubscription,
+  type Purchase,
+} from "expo-iap";
 import { DetailScreen } from "@/components/DetailScreen";
 import {
   SELAH_PRO_MONTHLY_PRODUCT_ID,
@@ -73,7 +79,7 @@ export default function Subscription() {
     }
     setTier("pro");
     setActiveProductId(productId);
-    setStatus(`Pro active · ${planFallback(productId).title}`);
+    setStatus(`Pro active Â· ${planFallback(productId).title}`);
     Alert.alert("Selah Pro active", "Your Pro access is now active.");
   };
 
@@ -106,7 +112,7 @@ export default function Subscription() {
     supabase
       .from("profiles")
       .select(
-        "subscription_tier,subscription_status,trial_ends_at,subscription_product_id",
+        "subscription_tier,subscription_status,trial_ends_at,subscription_product_id,subscription_expires_at",
       )
       .eq("id", user.id)
       .maybeSingle()
@@ -121,11 +127,16 @@ export default function Subscription() {
         const activePlan = data.subscription_product_id
           ? planFallback(data.subscription_product_id).title
           : "Selah Pro";
+        const expiresAt = data.subscription_expires_at
+          ? new Date(data.subscription_expires_at)
+          : null;
         setStatus(
           data.subscription_tier === "pro"
             ? days
-              ? `Pro trial · ${days} days`
-              : `${data.subscription_status || "active"} · ${activePlan}`
+              ? `Pro trial Â· ${days} days`
+              : expiresAt
+                ? `${activePlan} · renews ${expiresAt.toLocaleDateString()}`
+                : `${data.subscription_status || "active"} · ${activePlan}`
             : "Free",
         );
       });
@@ -179,17 +190,25 @@ export default function Subscription() {
     setMessage("");
     setBusyProductId("restore");
     await restorePurchases();
+    const activeSubscriptions = await getNativeActiveSubscriptions(
+      SELAH_PRO_PRODUCT_IDS,
+    );
     let restoredProductId: string | null = null;
+    let restoredPurchase: ActiveSubscription | null = null;
     for (const productId of SELAH_PRO_PRODUCT_IDS) {
-      if (await hasActiveSubscriptions([productId])) {
+      const active = activeSubscriptions.find(
+        (subscription) => subscription.productId === productId,
+      );
+      if (active || (await hasActiveSubscriptions([productId]))) {
         restoredProductId = productId;
+        restoredPurchase = active || null;
         break;
       }
     }
-    if (restoredProductId) {
+    if (restoredProductId && restoredPurchase) {
       const { error } = await supabase.functions.invoke(
         "record-app-store-purchase",
-        { body: { restore: true, productId: restoredProductId } },
+        { body: { purchase: restoredPurchase, productId: restoredProductId } },
       );
       setBusyProductId(null);
       if (error) {
@@ -200,12 +219,16 @@ export default function Subscription() {
       setActiveProductId(restoredProductId);
       setStatus(`Pro active · ${planFallback(restoredProductId).title}`);
       setMessage("Purchase restored. Pro access is active.");
+    } else if (restoredProductId) {
+      setBusyProductId(null);
+      setMessage(
+        "An active subscription was found, but StoreKit did not return a transaction ID. Try Restore Purchases again from TestFlight.",
+      );
     } else {
       setBusyProductId(null);
       setMessage("No active Selah Pro subscription was found for this Apple ID.");
     }
   };
-
   return (
     <DetailScreen title="Your Selah plan">
       <ScrollView contentContainerStyle={s.body} showsVerticalScrollIndicator={false}>
@@ -433,3 +456,4 @@ const styles = (c: AppColors) =>
     restore: { minHeight: 48, alignItems: "center", justifyContent: "center" },
     restoreText: { color: c.green, fontWeight: "800" },
   });
+

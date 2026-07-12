@@ -108,7 +108,7 @@ export default function Settings() {
     if (!user) return;
     supabase
       .from("profiles")
-      .select("subscription_tier,trial_ends_at,subscription_product_id")
+      .select("subscription_tier,trial_ends_at,subscription_product_id,subscription_expires_at")
       .eq("id", user.id)
       .maybeSingle()
       .then(({ data }) => {
@@ -119,10 +119,13 @@ export default function Settings() {
         const days = end
           ? Math.max(0, Math.ceil((end.getTime() - Date.now()) / 86400000))
           : null;
+        const expiresAt = data.subscription_expires_at
+          ? new Date(data.subscription_expires_at)
+          : null;
         setSubscriptionDetail(
           days === null
             ? SUBSCRIPTION_FALLBACKS[data.subscription_product_id || ""]?.title ||
-                "Pro"
+                (expiresAt ? `Pro · ${expiresAt.toLocaleDateString()}` : "Pro")
             : `Pro trial · ${days} days`,
         );
       });

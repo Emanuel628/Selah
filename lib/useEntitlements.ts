@@ -16,7 +16,9 @@ export function useEntitlements() {
     Promise.resolve(
       supabase
         .from("profiles")
-        .select("subscription_tier,subscription_status,trial_ends_at")
+        .select(
+          "subscription_tier,subscription_status,trial_ends_at,subscription_expires_at",
+        )
         .eq("id", user.id)
         .maybeSingle(),
     )
@@ -24,10 +26,14 @@ export function useEntitlements() {
         const trialActive = data?.trial_ends_at
           ? new Date(data.trial_ends_at).getTime() > Date.now()
           : false;
+        const subscriptionActive = data?.subscription_expires_at
+          ? new Date(data.subscription_expires_at).getTime() > Date.now()
+          : data?.subscription_status === "active";
         setPro(
           data?.subscription_tier === "pro" &&
             (trialActive ||
-              ["active", "trialing"].includes(data?.subscription_status || "")),
+              subscriptionActive ||
+              data?.subscription_status === "trialing"),
         );
       })
       .finally(() => setLoading(false));
