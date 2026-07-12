@@ -1,21 +1,66 @@
-import { useMemo } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { DetailScreen } from "@/components/DetailScreen";
 import { buildGardenInsights } from "@/lib/gardenInsights";
+import { supabase } from "@/lib/supabase";
 import { useEntitlements } from "@/lib/useEntitlements";
 import { AppColors } from "@/lib/theme";
+import { useAuth } from "@/state/Auth";
 import { useGarden } from "@/state/Garden";
 import { useThemeColors } from "@/state/useThemeColors";
 
 export default function GardenInsights() {
   const router = useRouter();
+  const { user } = useAuth();
   const { notes } = useGarden();
   const { pro } = useEntitlements();
   const c = useThemeColors();
   const s = useMemo(() => styles(c), [c]);
   const insights = useMemo(() => buildGardenInsights(notes), [notes]);
+  const [aiSynthesis, setAiSynthesis] = useState("");
+  const [aiMode, setAiMode] = useState<"ai" | "fallback" | "">("");
+  const [aiReason, setAiReason] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
+  const generateSynthesis = async () => {
+    if (!user) {
+      setAiError("Sign in to generate Garden synthesis.");
+      return;
+    }
+    setAiLoading(true);
+    setAiError("");
+    setAiSynthesis("");
+    setAiMode("");
+    setAiReason("");
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "garden-synthesis",
+        { body: { purpose: "insights" } },
+      );
+      if (error) {
+        setAiError(error.message);
+        return;
+      }
+      setAiSynthesis(data?.synthesis || "No synthesis was returned.");
+      setAiMode(data?.mode || "fallback");
+      setAiReason(data?.reason || "");
+    } catch (caught) {
+      setAiError(
+        caught instanceof Error ? caught.message : "Could not generate synthesis.",
+      );
+    } finally {
+      setAiLoading(false);
+    }
+  };
   return (
     <DetailScreen title="Garden Insights" subtitle="Synthesis from your notes">
       <ScrollView contentContainerStyle={s.body} showsVerticalScrollIndicator={false}>
@@ -38,9 +83,37 @@ export default function GardenInsights() {
           <Text style={s.eyebrow}>SYNTHESIS</Text>
           <Text style={s.summary}>{insights.summary}</Text>
           <Text style={s.prompt}>{insights.prompt}</Text>
+          {!!aiError && <Text style={s.error}>{aiError}</Text>}
+          {!!aiSynthesis && (
+            <View style={s.aiBox}>
+              <Text style={s.aiLabel}>
+                {aiMode === "ai" ? "AI SYNTHESIS" : "LOCAL SYNTHESIS"}
+              </Text>
+              {aiMode === "fallback" && (
+                <Text style={s.aiNotice}>
+                  AI unavailable{aiReason ? ` (${aiReason})` : ""}.
+                </Text>
+              )}
+              <Text style={s.aiText}>{aiSynthesis}</Text>
+            </View>
+          )}
+          <Pressable
+            disabled={aiLoading}
+            onPress={generateSynthesis}
+            style={[s.guideButton, aiLoading && s.disabled]}
+          >
+            {aiLoading ? (
+              <ActivityIndicator color={c.onAccent} />
+            ) : (
+              <>
+                <Ionicons name="sparkles-outline" size={17} color={c.onAccent} />
+                <Text style={s.guideText}>Generate Garden Synthesis</Text>
+              </>
+            )}
+          </Pressable>
           <Pressable
             onPress={() => router.push("/reflection-guide" as any)}
-            style={s.guideButton}
+            style={s.secondaryButton}
           >
             <Ionicons name="sparkles-outline" size={17} color={c.onAccent} />
             <Text style={s.guideText}>Open Reflection Guide</Text>
@@ -172,7 +245,35 @@ const styles = (c: AppColors) =>
       gap: 7,
       marginTop: 14,
     },
+    secondaryButton: {
+      minHeight: 44,
+      borderRadius: 12,
+      backgroundColor: c.green,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 7,
+      marginTop: 10,
+      opacity: 0.86,
+    },
+    disabled: { opacity: 0.55 },
     guideText: { color: c.onAccent, fontWeight: "900", fontSize: 12 },
+    error: { color: c.danger, fontSize: 12, marginTop: 10 },
+    aiBox: {
+      borderTopWidth: 1,
+      borderColor: c.line,
+      marginTop: 14,
+      paddingTop: 12,
+    },
+    aiLabel: {
+      color: c.gold,
+      fontSize: 9,
+      fontWeight: "900",
+      letterSpacing: 1,
+      marginBottom: 6,
+    },
+    aiNotice: { color: c.muted, fontSize: 11, lineHeight: 17, marginBottom: 7 },
+    aiText: { color: c.text, fontSize: 12, lineHeight: 19 },
     section: {
       backgroundColor: c.surface,
       borderWidth: 1,

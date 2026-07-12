@@ -1,19 +1,66 @@
-import { useMemo } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { DetailScreen } from "@/components/DetailScreen";
 import { buildKnowledgeGraph } from "@/lib/knowledgeGraph";
+import { supabase } from "@/lib/supabase";
 import { AppColors } from "@/lib/theme";
+import { useAuth } from "@/state/Auth";
 import { useGarden } from "@/state/Garden";
 import { useThemeColors } from "@/state/useThemeColors";
 
 export default function KnowledgeGraph() {
   const router = useRouter();
+  const { user } = useAuth();
   const { notes } = useGarden();
   const c = useThemeColors();
   const s = useMemo(() => styles(c), [c]);
   const clusters = useMemo(() => buildKnowledgeGraph(notes), [notes]);
+  const [synthesis, setSynthesis] = useState("");
+  const [mode, setMode] = useState<"ai" | "fallback" | "">("");
+  const [reason, setReason] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const explainGraph = async () => {
+    if (!user) {
+      setError("Sign in to generate a connection summary.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    setSynthesis("");
+    setMode("");
+    setReason("");
+    try {
+      const { data, error: invokeError } = await supabase.functions.invoke(
+        "garden-synthesis",
+        { body: { purpose: "graph" } },
+      );
+      if (invokeError) {
+        setError(invokeError.message);
+        return;
+      }
+      setSynthesis(data?.synthesis || "No connection summary was returned.");
+      setMode(data?.mode || "fallback");
+      setReason(data?.reason || "");
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Could not generate connection summary.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <DetailScreen title="Knowledge Graph" subtitle="Connections in your Garden">
       <ScrollView contentContainerStyle={s.body} showsVerticalScrollIndicator={false}>
@@ -26,6 +73,41 @@ export default function KnowledgeGraph() {
               can see which ideas are forming across passages.
             </Text>
           </View>
+        </View>
+        <View style={s.aiCard}>
+          <Text style={s.aiTitle}>Connection summary</Text>
+          <Text style={s.aiSubtext}>
+            Generate a concise explanation of the strongest connections in your
+            Garden graph.
+          </Text>
+          {!!error && <Text style={s.error}>{error}</Text>}
+          {!!synthesis && (
+            <View style={s.aiResult}>
+              <Text style={s.aiLabel}>
+                {mode === "ai" ? "AI GRAPH SUMMARY" : "LOCAL GRAPH SUMMARY"}
+              </Text>
+              {mode === "fallback" && (
+                <Text style={s.aiNotice}>
+                  AI unavailable{reason ? ` (${reason})` : ""}.
+                </Text>
+              )}
+              <Text style={s.aiText}>{synthesis}</Text>
+            </View>
+          )}
+          <Pressable
+            disabled={loading}
+            onPress={explainGraph}
+            style={[s.aiButton, loading && s.disabled]}
+          >
+            {loading ? (
+              <ActivityIndicator color={c.onAccent} />
+            ) : (
+              <>
+                <Ionicons name="sparkles-outline" size={17} color={c.onAccent} />
+                <Text style={s.aiButtonText}>Explain My Graph</Text>
+              </>
+            )}
+          </Pressable>
         </View>
         {clusters.length ? (
           clusters.map((cluster) => (
@@ -140,4 +222,42 @@ const styles = (c: AppColors) =>
     },
     emptyTitle: { color: c.text, fontWeight: "800" },
     emptyText: { color: c.muted, fontSize: 12, lineHeight: 18, marginTop: 5 },
+    aiCard: {
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.line,
+      borderRadius: 14,
+      padding: 14,
+      marginBottom: 12,
+    },
+    aiTitle: { color: c.text, fontWeight: "800" },
+    aiSubtext: { color: c.muted, fontSize: 11, lineHeight: 17, marginTop: 4 },
+    error: { color: c.danger, fontSize: 12, marginTop: 10 },
+    aiResult: {
+      borderTopWidth: 1,
+      borderColor: c.line,
+      marginTop: 12,
+      paddingTop: 12,
+    },
+    aiLabel: {
+      color: c.gold,
+      fontSize: 9,
+      fontWeight: "900",
+      letterSpacing: 1,
+      marginBottom: 6,
+    },
+    aiNotice: { color: c.muted, fontSize: 11, lineHeight: 17, marginBottom: 7 },
+    aiText: { color: c.text, fontSize: 12, lineHeight: 19 },
+    aiButton: {
+      minHeight: 44,
+      borderRadius: 12,
+      backgroundColor: c.green,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 7,
+      marginTop: 12,
+    },
+    disabled: { opacity: 0.55 },
+    aiButtonText: { color: c.onAccent, fontWeight: "900", fontSize: 12 },
   });

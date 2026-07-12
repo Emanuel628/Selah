@@ -27,6 +27,7 @@ export default function ReflectionGuide() {
   const [question, setQuestion] = useState("");
   const [guide, setGuide] = useState("");
   const [mode, setMode] = useState<"ai" | "fallback" | "">("");
+  const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -62,17 +63,30 @@ export default function ReflectionGuide() {
     }
     setLoading(true);
     setError("");
-    const { data, error: invokeError } = await supabase.functions.invoke(
-      "reflection-guide",
-      { body: { passage, verseText: passageText, question } },
-    );
-    setLoading(false);
-    if (invokeError) {
-      setError(invokeError.message);
-      return;
+    setGuide("");
+    setMode("");
+    setReason("");
+    try {
+      const { data, error: invokeError } = await supabase.functions.invoke(
+        "reflection-guide",
+        { body: { passage, verseText: passageText, question } },
+      );
+      if (invokeError) {
+        setError(invokeError.message);
+        return;
+      }
+      setGuide(data?.guide || "No guidance was returned.");
+      setMode(data?.mode || "fallback");
+      setReason(data?.reason || "");
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Could not generate reflection help.",
+      );
+    } finally {
+      setLoading(false);
     }
-    setGuide(data?.guide || "No guidance was returned.");
-    setMode(data?.mode || "fallback");
   };
 
   return (
@@ -120,6 +134,12 @@ export default function ReflectionGuide() {
             <Text style={s.eyebrow}>
               {mode === "ai" ? "AI-GUIDED REFLECTION" : "GUIDED REFLECTION"}
             </Text>
+            {mode === "fallback" && (
+              <Text style={s.notice}>
+                Local guidance shown because AI generation was unavailable
+                {reason ? ` (${reason})` : ""}.
+              </Text>
+            )}
             <Text style={s.guide}>{guide}</Text>
           </View>
         )}
@@ -187,4 +207,10 @@ const styles = (c: AppColors) =>
       marginTop: 14,
     },
     guide: { color: c.text, lineHeight: 22 },
+    notice: {
+      color: c.muted,
+      fontSize: 11,
+      lineHeight: 17,
+      marginBottom: 10,
+    },
   });

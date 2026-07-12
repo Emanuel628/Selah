@@ -77,9 +77,9 @@ export default function Read() {
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const lastTap = useRef(0);
-  const webRemoveTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>(
-    {},
-  );
+  const scrollY = useRef(0);
+  const scrollPageY = useRef(0);
+  const readerScrollRef = useRef<ScrollView | null>(null);
   const verseLayouts = useRef<Record<number, { y: number; height: number }>>(
     {},
   );
@@ -249,15 +249,20 @@ export default function Read() {
     }
     return true;
   };
-  const startHighlight = async (verse: number) => {
-    if (await removeHighlightForVerse(verse)) return;
+  const startHighlight = (verse: number) => {
     activeHighlightRef.current = { start: verse, end: verse };
     setActiveHighlight({ start: verse, end: verse });
   };
+  const handleVerseLongPress = async (verse: number) => {
+    if (highlightForVerse(verse)) {
+      await removeHighlightForVerse(verse);
+      return;
+    }
+    startHighlight(verse);
+  };
   const toggleSingleVerseHighlight = async (verse: number) => {
     if (await removeHighlightForVerse(verse)) return;
-    activeHighlightRef.current = { start: verse, end: verse };
-    setActiveHighlight({ start: verse, end: verse });
+    startHighlight(verse);
     setTimeout(() => void finishHighlight(), 0);
   };
   const webClickToggleProps = (verse: number) =>
@@ -266,26 +271,16 @@ export default function Read() {
           onClick: () => void toggleSingleVerseHighlight(verse),
         } as object)
       : {};
-  const longPressRemoveProps = (verse: number) => ({
-    onPressIn: () => {
-      if (!highlightForVerse(verse)) {
-        webRemoveTimers.current[verse] = setTimeout(() => {
-          void startHighlight(verse);
-        }, 450);
-        return;
-      }
-      webRemoveTimers.current[verse] = setTimeout(() => {
-        void removeHighlightForVerse(verse);
-      }, 450);
-    },
-    onPressOut: () => {
-      clearTimeout(webRemoveTimers.current[verse]);
-      if (activeHighlightRef.current) void finishHighlight();
-    },
-  });
   const moveHighlight = (event: GestureResponderEvent) => {
     if (!activeHighlight) return;
-    const y = event.nativeEvent.locationY;
+    const pageY =
+      typeof event.nativeEvent.pageY === "number"
+        ? event.nativeEvent.pageY
+        : event.nativeEvent.locationY;
+    const y =
+      scrollPageY.current > 0
+        ? pageY - scrollPageY.current + scrollY.current
+        : event.nativeEvent.locationY + scrollY.current;
     const match = Object.entries(verseLayouts.current).find(([, layout]) => {
       return y >= layout.y && y <= layout.y + layout.height;
     });
@@ -338,6 +333,22 @@ export default function Read() {
     touchStartX.current = event.nativeEvent.pageX;
     touchStartY.current = event.nativeEvent.pageY;
   };
+  const measureReaderScroll = () => {
+    requestAnimationFrame(() => {
+      (readerScrollRef.current as any)?.measure(
+        (
+          _x: number,
+          _y: number,
+          _width: number,
+          _height: number,
+          _pageX: number,
+          pageY: number,
+        ) => {
+          scrollPageY.current = pageY || 0;
+        },
+      );
+    });
+  };
   const handleFullscreenTap = () => {
     const now = Date.now();
     if (now - lastTap.current < 350) setReaderFullscreen(false);
@@ -384,11 +395,17 @@ export default function Read() {
           : {})}
       >
         <ScrollView
+          ref={readerScrollRef}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={s.fullscreenBody}
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
           onTouchMove={moveHighlight}
+          onLayout={measureReaderScroll}
+          onScroll={(event) => {
+            scrollY.current = event.nativeEvent.contentOffset.y;
+          }}
+          scrollEventThrottle={16}
           {...(Platform.OS === "web"
             ? ({ onDoubleClick: () => setReaderFullscreen(false) } as object)
             : {})}
@@ -398,12 +415,12 @@ export default function Read() {
               accessibilityLabel={`Verse ${verse.number}`}
               key={verse.number}
               onPress={() => {
-                if (highlightForVerse(verse.number))
-                  void removeHighlightForVerse(verse.number);
-                else handleFullscreenTap();
+                handleFullscreenTap();
               }}
-              onLongPress={() => void startHighlight(verse.number)}
-              {...longPressRemoveProps(verse.number)}
+              onLongPress={() => void handleVerseLongPress(verse.number)}
+              onPressOut={() => {
+                if (activeHighlightRef.current) void finishHighlight();
+              }}
               {...(Platform.OS === "web"
                 ? ({ onDoubleClick: () => setReaderFullscreen(false) } as object)
                 : {})}
@@ -414,9 +431,7 @@ export default function Read() {
             >
               <Text
               onPress={() => {
-                if (highlightForVerse(verse.number))
-                  void removeHighlightForVerse(verse.number);
-                else handleFullscreenTap();
+                handleFullscreenTap();
               }}
               {...(Platform.OS === "web"
                 ? ({ onDoubleClick: () => setReaderFullscreen(false) } as object)
@@ -526,12 +541,18 @@ export default function Read() {
       {chapter && (
         <View style={s.reader}>
           <ScrollView
+            ref={readerScrollRef}
             key={`${currentBookId}-${currentChapter}-${currentPage}`}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={s.body}
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
             onTouchMove={moveHighlight}
+            onLayout={measureReaderScroll}
+            onScroll={(event) => {
+              scrollY.current = event.nativeEvent.contentOffset.y;
+            }}
+            scrollEventThrottle={16}
           >
             <Text style={s.section}>
               {chapter.headings[0]?.toUpperCase() || "SCRIPTURE"}
@@ -540,23 +561,17 @@ export default function Read() {
               <Pressable
                 accessibilityLabel={`Verse ${verse.number}`}
                 key={verse.number}
-                onPress={() => {
-                  if (highlightForVerse(verse.number))
-                    void removeHighlightForVerse(verse.number);
+                onLongPress={() => void handleVerseLongPress(verse.number)}
+                onPressOut={() => {
+                  if (activeHighlightRef.current) void finishHighlight();
                 }}
-                onLongPress={() => void startHighlight(verse.number)}
                 {...webClickToggleProps(verse.number)}
-                {...longPressRemoveProps(verse.number)}
                 onLayout={(event) => {
                   verseLayouts.current[verse.number] = event.nativeEvent.layout;
                 }}
                 style={highlightStyle(verse.number)}
               >
                 <Text
-                onPress={() => {
-                  if (highlightForVerse(verse.number))
-                    void removeHighlightForVerse(verse.number);
-                }}
                 {...webClickToggleProps(verse.number)}
                 style={[
                   s.verse,

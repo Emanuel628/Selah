@@ -8,6 +8,18 @@ type Note = {
   thought_group?: string | null;
 };
 
+function env(...names: string[]) {
+  for (const name of names) {
+    const value = Deno.env.get(name);
+    const cleaned = value
+      ?.trim()
+      .replace(/^["']|["']$/g, "")
+      .replace(/^Bearer\s+/i, "");
+    if (cleaned) return cleaned;
+  }
+  return "";
+}
+
 function fallbackGuide(passage: string, notes: Note[]) {
   const related = notes
     .filter((note) => `${note.reference || ""}`.includes(passage.split(",")[0]))
@@ -46,10 +58,14 @@ Deno.serve(async (req) => {
       .order("updated_at", { ascending: false })
       .limit(25);
 
-    const openAiKey = Deno.env.get("OPENAI_API_KEY");
+    const openAiKey = env("OPENAI_API_KEY", "openai_api_key");
     if (!openAiKey) {
       return new Response(
-        JSON.stringify({ guide: fallbackGuide(passage, notes || []), mode: "fallback" }),
+        JSON.stringify({
+          guide: fallbackGuide(passage, notes || []),
+          mode: "fallback",
+          reason: "missing_openai_key",
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -73,13 +89,20 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: Deno.env.get("OPENAI_MODEL") || "gpt-5.1",
+        model: env("OPENAI_MODEL", "openai_model") || "gpt-4.1-mini",
         input: prompt,
+        max_output_tokens: 900,
       }),
     });
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error("OpenAI reflection-guide failed", response.status, errorText);
       return new Response(
-        JSON.stringify({ guide: fallbackGuide(passage, notes || []), mode: "fallback" }),
+        JSON.stringify({
+          guide: fallbackGuide(passage, notes || []),
+          mode: "fallback",
+          reason: `openai_${response.status}`,
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -96,6 +119,7 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     if (error instanceof Response) return error;
+    console.error("Reflection guide failed", error);
     return new Response(JSON.stringify({ error: "Reflection guide failed" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
