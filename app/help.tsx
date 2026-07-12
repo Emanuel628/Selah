@@ -31,7 +31,7 @@ const sections = [
   ],
   [
     "Find a reflection",
-    "Use Garden filters to narrow notes by thought group, tags, Scripture book, or date. Open Garden Insights for synthesis, or Knowledge Graph to browse connections between tags, books, thought groups, and notes.",
+    "Use Garden filters to narrow notes by thought type, themes, Scripture book, or date. As your Garden grows, open Insights or Connections to browse relationships between themes, books, thought types, and reflections.",
   ],
   [
     "Search and cross-references",
@@ -55,7 +55,7 @@ const sections = [
   ],
   [
     "Free and Pro",
-    "Selah Free includes reading, Garden reflections, bookmarks, Scripture search, highlights, and reminders. Pro tools include Garden Insights, Knowledge Graph, Word Study, cross-reference study, and AI-guided reflection. App Store billing is wired through the subscription page and requires the Selah Pro product to be active in App Store Connect.",
+    "Selah Free includes reading, Garden reflections, bookmarks, Scripture search, highlights, and reminders. Pro tools include Garden Insights, Connections, Word Study, cross-reference study, and AI-guided reflection. App Store billing is wired through the subscription page and requires the Selah Pro product to be active in App Store Connect.",
   ],
 ] as const;
 

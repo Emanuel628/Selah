@@ -14,17 +14,17 @@ const steps = [
   [
     "create-outline",
     "Capture what you notice",
-    "From Garden, create a reflection anchored to your current book, chapter, and reading page. Give it a title, Thought Group, and useful tags.",
+    "Tap Reflect from the Reader. Write what stayed with you first; title, thought type, and themes are optional.",
   ],
   [
     "leaf-outline",
     "Grow your Garden",
-    "Filter, edit, and reconnect your reflections in Garden. Use Search for Bible text search, and use the down arrow on Read to jump by book, chapter, and page.",
+    "Garden starts simple and reveals themes, filters, insights, and connections as your reflections grow.",
   ],
   [
     "notifications-outline",
     "Build a rhythm",
-    "Enable Study Rhythm to schedule selected-day device notifications. Face ID and appearance controls live in Settings.",
+    "Revisit brings older questions, applications, and themes back so your reflections become memory instead of storage.",
   ],
 ];
 export default function Guide() {
@@ -47,10 +47,10 @@ export default function Guide() {
           </View>
         ))}
         <Pressable
-          onPress={() => router.replace("/onboarding/plan")}
+          onPress={() => router.replace("/(tabs)")}
           style={s.button}
         >
-          <Text style={s.buttonText}>See account options</Text>
+          <Text style={s.buttonText}>Begin reading</Text>
         </Pressable>
       </ScrollView>
     </DetailScreen>

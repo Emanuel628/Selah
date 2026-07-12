@@ -18,14 +18,6 @@ function Navigation() {
       router.replace("/update-password");
       return;
     }
-    const publicRoute = [
-      "/login",
-      "/register",
-      "/forgot-password",
-      "/auth-verify",
-      "/update-password",
-    ].some((route) => pathname.startsWith(route));
-    if (!session && !publicRoute) router.replace("/login");
   }, [session, loading, pathname, passwordRecovery]);
   return (
     <>

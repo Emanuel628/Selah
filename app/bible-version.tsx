@@ -73,7 +73,7 @@ export default function BibleVersion() {
     if (onboarding !== "1") router.back();
   };
   const finish = async () => {
-    router.replace("/onboarding/biometrics");
+    router.replace("/onboarding/guide");
   };
   return (
     <DetailScreen

@@ -62,7 +62,7 @@ export default function KnowledgeGraph() {
     }
   };
   return (
-    <DetailScreen title="Knowledge Graph" subtitle="Connections in your Garden">
+    <DetailScreen title="Connections" subtitle="Relationships in your Garden">
       <ScrollView contentContainerStyle={s.body} showsVerticalScrollIndicator={false}>
         <View style={s.intro}>
           <Ionicons name="git-network-outline" size={24} color={c.green} />
@@ -104,7 +104,7 @@ export default function KnowledgeGraph() {
             ) : (
               <>
                 <Ionicons name="sparkles-outline" size={17} color={c.onAccent} />
-                <Text style={s.aiButtonText}>Explain My Graph</Text>
+                <Text style={s.aiButtonText}>Explain Connections</Text>
               </>
             )}
           </Pressable>

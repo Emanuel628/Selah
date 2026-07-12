@@ -53,16 +53,16 @@ export default function NoteDetail() {
       >
         <View style={s.meta}>
           <Text style={s.eyebrow}>{note.reference.toUpperCase()}</Text>
-          <Text style={s.group}>{note.group}</Text>
+          {!!note.group && <Text style={s.group}>{note.group}</Text>}
         </View>
-        <Text style={s.title}>{note.title}</Text>
+        <Text style={s.title}>{note.title || note.body}</Text>
         <Text style={s.note}>{note.body}</Text>
         <Text style={s.label}>SCRIPTURE ANCHOR</Text>
         <View style={s.anchor}>
           <Ionicons name="book-outline" size={19} color={c.gold} />
           <Text style={s.anchorText}>{note.reference}</Text>
         </View>
-        <Text style={s.label}>TAGS & CONNECTIONS</Text>
+        <Text style={s.label}>THEMES</Text>
         <View style={s.tags}>
           {note.tags.length ? (
             note.tags.map((tag) => (
@@ -73,6 +73,14 @@ export default function NoteDetail() {
           ) : (
             <Text style={s.noTags}>No tags yet</Text>
           )}
+        </View>
+        <Text style={s.label}>CONNECTED REFLECTIONS</Text>
+        <View style={s.anchor}>
+          <Ionicons name="git-branch-outline" size={19} color={c.green} />
+          <Text style={s.anchorText}>
+            Direct reflection links are ready in the data model. Use shared
+            themes for now; explicit links come next.
+          </Text>
         </View>
         {!confirmDelete ? (
           <Pressable

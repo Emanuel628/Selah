@@ -17,6 +17,7 @@ import { THOUGHT_GROUPS, ThoughtGroup, useGarden } from "@/state/Garden";
 import { useThemeColors } from "@/state/useThemeColors";
 
 type Sort = "Updated" | "Newest" | "Oldest";
+
 export default function Garden() {
   const router = useRouter();
   const c = useThemeColors();
@@ -55,11 +56,36 @@ export default function Garden() {
             : b.updatedAt.localeCompare(a.updatedAt),
       );
   }, [notes, query, group, tag, sort]);
+  const topThemes = useMemo(() => {
+    const counts = new Map<string, number>();
+    notes.forEach((note) =>
+      note.tags.forEach((item) => counts.set(item, (counts.get(item) || 0) + 1)),
+    );
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
+  }, [notes]);
   const reset = () => {
     setGroup("All");
     setTag("All");
     setSort("Updated");
   };
+
+  if (!notes.length) {
+    return (
+      <Screen title="Garden">
+        <View style={s.emptyFull}>
+          <Ionicons name="leaf-outline" size={36} color={c.green} />
+          <Text style={s.emptyTitle}>Your Garden begins with one reflection.</Text>
+          <Text style={s.emptyCopy}>
+            When something stays with you while reading, tap Reflect and save it here.
+          </Text>
+          <Pressable onPress={() => router.push("/(tabs)")} style={s.primary}>
+            <Text style={s.primaryText}>Continue reading</Text>
+          </Pressable>
+        </View>
+      </Screen>
+    );
+  }
+
   return (
     <Screen title="Garden">
       <View style={s.summary}>
@@ -70,42 +96,59 @@ export default function Garden() {
           </Text>
         </View>
         <Pressable
-          accessibilityLabel="New note"
+          accessibilityLabel="New reflection"
           onPress={() => router.push("/note/new")}
           style={s.newButton}
         >
           <Ionicons name="add" size={20} color={c.onAccent} />
-          <Text style={s.newText}>New note</Text>
+          <Text style={s.newText}>Reflect</Text>
         </Pressable>
       </View>
-      <Pressable
-        accessibilityLabel="Open Garden Insights"
-        onPress={() => router.push("/garden-insights" as any)}
-        style={s.insights}
-      >
-        <Ionicons name="sparkles-outline" size={18} color={c.gold} />
-        <View style={s.insightsCopy}>
-          <Text style={s.insightsTitle}>Garden Insights</Text>
-          <Text style={s.insightsText}>
-            See themes, questions, applications, and connections forming.
+
+      {notes.length <= 2 && (
+        <View style={s.growth}>
+          <Text style={s.growthTitle}>Your Garden is taking root.</Text>
+          <Text style={s.growthCopy}>
+            Add a few more reflections and Selah will begin showing themes and connections.
           </Text>
         </View>
-        <Ionicons name="chevron-forward" size={18} color={c.muted} />
-      </Pressable>
-      <Pressable
-        accessibilityLabel="Open Knowledge Graph"
-        onPress={() => router.push("/knowledge-graph" as any)}
-        style={s.insights}
-      >
-        <Ionicons name="git-network-outline" size={18} color={c.green} />
-        <View style={s.insightsCopy}>
-          <Text style={s.insightsTitle}>Knowledge Graph</Text>
-          <Text style={s.insightsText}>
-            Browse connections between books, thought groups, tags, and notes.
-          </Text>
+      )}
+
+      {notes.length >= 3 && (
+        <View style={s.themePanel}>
+          <View style={s.panelHeader}>
+            <View>
+              <Text style={s.panelTitle}>Themes beginning to grow</Text>
+              <Text style={s.panelCopy}>Patterns from your saved reflections.</Text>
+            </View>
+            {notes.length >= 6 && (
+              <Pressable onPress={() => router.push("/garden-insights" as any)}>
+                <Text style={s.panelLink}>Insights</Text>
+              </Pressable>
+            )}
+          </View>
+          {topThemes.length ? (
+            topThemes.map(([item, count]) => (
+              <View key={item} style={s.themeRow}>
+                <Text style={s.themeName}>{item}</Text>
+                <Text style={s.themeCount}>{count} reflections</Text>
+              </View>
+            ))
+          ) : (
+            <Text style={s.muted}>Add themes to reflections to reveal patterns.</Text>
+          )}
+          {notes.length >= 6 && (
+            <Pressable
+              onPress={() => router.push("/knowledge-graph" as any)}
+              style={s.connections}
+            >
+              <Ionicons name="git-network-outline" size={17} color={c.green} />
+              <Text style={s.connectionsText}>Open Connections</Text>
+            </Pressable>
+          )}
         </View>
-        <Ionicons name="chevron-forward" size={18} color={c.muted} />
-      </Pressable>
+      )}
+
       <View style={s.tools}>
         <View style={s.search}>
           <Ionicons name="search" size={18} color={c.muted} />
@@ -130,6 +173,7 @@ export default function Garden() {
           {activeCount > 0 && <Text style={s.filterCount}>{activeCount}</Text>}
         </Pressable>
       </View>
+
       <FlatList
         data={visible}
         keyExtractor={(item) => item.id}
@@ -139,9 +183,7 @@ export default function Garden() {
           <View style={s.empty}>
             <Ionicons name="leaf-outline" size={28} color={c.muted} />
             <Text style={s.emptyTitle}>No reflections found</Text>
-            <Text style={s.emptyCopy}>
-              Adjust your filters or capture a new thought from Scripture.
-            </Text>
+            <Text style={s.emptyCopy}>Adjust your filters or search terms.</Text>
           </View>
         }
         renderItem={({ item }) => (
@@ -153,9 +195,9 @@ export default function Garden() {
           >
             <View style={s.metaRow}>
               <Text style={s.reference}>{item.reference}</Text>
-              <Text style={s.groupLabel}>{item.group}</Text>
+              {!!item.group && <Text style={s.groupLabel}>{item.group}</Text>}
             </View>
-            <Text style={s.title}>{item.title}</Text>
+            <Text style={s.title}>{item.title || item.body}</Text>
             <Text numberOfLines={2} style={s.noteBody}>
               {item.body}
             </Text>
@@ -172,6 +214,7 @@ export default function Garden() {
           </Pressable>
         )}
       />
+
       <Modal
         visible={filterOpen}
         transparent
@@ -184,87 +227,43 @@ export default function Garden() {
             <View style={s.sheetHeader}>
               <View>
                 <Text style={s.sheetTitle}>Filter Garden</Text>
-                <Text style={s.sheetSubtitle}>
-                  Narrow reflections by how you organized them.
-                </Text>
+                <Text style={s.sheetSubtitle}>Narrow reflections when you need to.</Text>
               </View>
-              <Pressable
-                accessibilityLabel="Close filters"
-                onPress={() => setFilterOpen(false)}
-                style={s.close}
-              >
+              <Pressable onPress={() => setFilterOpen(false)} style={s.close}>
                 <Ionicons name="close" size={22} color={c.text} />
               </Pressable>
             </View>
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={s.label}>THOUGHT GROUP</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={s.horizontalOptions}
-              >
+              <Text style={s.label}>THOUGHT TYPE</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.horizontalOptions}>
                 {(["All", ...THOUGHT_GROUPS] as const).map((item) => (
-                  <Pressable
-                    key={item}
-                    onPress={() => setGroup(item)}
-                    style={[s.option, group === item && s.optionActive]}
-                  >
-                    <Text
-                      style={[
-                        s.optionText,
-                        group === item && s.optionTextActive,
-                      ]}
-                    >
-                      {item}
-                    </Text>
+                  <Pressable key={item} onPress={() => setGroup(item)} style={[s.option, group === item && s.optionActive]}>
+                    <Text style={[s.optionText, group === item && s.optionTextActive]}>{item}</Text>
                   </Pressable>
                 ))}
               </ScrollView>
-              <Text style={s.label}>TAG</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={s.horizontalOptions}
-              >
+              <Text style={s.label}>THEME</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.horizontalOptions}>
                 {["All", ...tags].map((item) => (
-                  <Pressable
-                    key={item}
-                    onPress={() => setTag(item)}
-                    style={[s.option, tag === item && s.optionActive]}
-                  >
-                    <Text
-                      style={[s.optionText, tag === item && s.optionTextActive]}
-                    >
-                      {item === "All" ? "All tags" : `#${item}`}
-                    </Text>
+                  <Pressable key={item} onPress={() => setTag(item)} style={[s.option, tag === item && s.optionActive]}>
+                    <Text style={[s.optionText, tag === item && s.optionTextActive]}>{item === "All" ? "All themes" : `#${item}`}</Text>
                   </Pressable>
                 ))}
               </ScrollView>
               <Text style={s.label}>SORT</Text>
               <View style={s.options}>
                 {(["Updated", "Newest", "Oldest"] as Sort[]).map((item) => (
-                  <Pressable
-                    key={item}
-                    onPress={() => setSort(item)}
-                    style={[s.option, sort === item && s.optionActive]}
-                  >
-                    <Text
-                      style={[
-                        s.optionText,
-                        sort === item && s.optionTextActive,
-                      ]}
-                    >
-                      {item}
-                    </Text>
+                  <Pressable key={item} onPress={() => setSort(item)} style={[s.option, sort === item && s.optionActive]}>
+                    <Text style={[s.optionText, sort === item && s.optionTextActive]}>{item}</Text>
                   </Pressable>
                 ))}
               </View>
-              <View style={s.sheetActions}>
+              <View style={s.actions}>
                 <Pressable onPress={reset} style={s.reset}>
                   <Text style={s.resetText}>Reset</Text>
                 </Pressable>
                 <Pressable onPress={() => setFilterOpen(false)} style={s.apply}>
-                  <Text style={s.applyText}>Show {visible.length}</Text>
+                  <Text style={s.applyText}>Apply</Text>
                 </Pressable>
               </View>
             </ScrollView>
@@ -274,210 +273,68 @@ export default function Garden() {
     </Screen>
   );
 }
+
 const styles = (c: AppColors) =>
   StyleSheet.create({
-    summary: {
-      margin: 18,
-      marginBottom: 10,
-      padding: 16,
-      borderRadius: 16,
-      backgroundColor: c.surface,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      borderWidth: 1,
-      borderColor: c.line,
-    },
-    summaryLabel: {
-      color: c.muted,
-      fontSize: 9,
-      fontWeight: "700",
-      letterSpacing: 1.3,
-    },
-    summaryValue: {
-      color: c.text,
-      fontSize: 18,
-      fontWeight: "700",
-      marginTop: 4,
-    },
-    newButton: {
-      minHeight: 44,
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 4,
-      backgroundColor: c.green,
-      paddingHorizontal: 13,
-      borderRadius: 11,
-    },
-    newText: { color: c.onAccent, fontWeight: "800", fontSize: 12 },
-    insights: {
-      marginHorizontal: 18,
-      marginBottom: 10,
-      minHeight: 58,
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: c.line,
-      backgroundColor: c.surface,
-      flexDirection: "row",
-      alignItems: "center",
-      paddingHorizontal: 14,
-      gap: 10,
-    },
-    insightsCopy: { flex: 1 },
-    insightsTitle: { color: c.text, fontWeight: "800" },
-    insightsText: { color: c.muted, fontSize: 10, marginTop: 2 },
-    tools: {
-      flexDirection: "row",
-      gap: 8,
-      paddingHorizontal: 18,
-      marginBottom: 10,
-    },
-    search: {
-      flex: 1,
-      height: 46,
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-      backgroundColor: c.surface,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: c.line,
-      paddingHorizontal: 12,
-    },
-    searchInput: { flex: 1, color: c.text },
-    filterButton: {
-      width: 46,
-      height: 46,
-      borderRadius: 12,
-      backgroundColor: c.surface,
-      borderWidth: 1,
-      borderColor: c.line,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    filterButtonActive: { backgroundColor: c.green },
-    filterCount: {
-      position: "absolute",
-      top: 4,
-      right: 5,
-      color: c.onAccent,
-      fontSize: 8,
-      fontWeight: "800",
-    },
-    list: { paddingHorizontal: 18, paddingBottom: 30 },
-    card: {
-      backgroundColor: c.surface,
-      padding: 16,
-      borderRadius: 15,
-      borderWidth: 1,
-      borderColor: c.line,
-      marginBottom: 11,
-    },
-    pressed: { opacity: 0.7 },
-    metaRow: { flexDirection: "row", justifyContent: "space-between" },
-    reference: { color: c.green, fontSize: 11, fontWeight: "700" },
-    groupLabel: {
-      color: c.muted,
-      fontSize: 9,
-      textTransform: "uppercase",
-      letterSpacing: 0.8,
-    },
-    title: { color: c.text, fontSize: 17, fontWeight: "700", marginTop: 10 },
-    noteBody: { color: c.muted, lineHeight: 19, marginTop: 6 },
-    cardBottom: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginTop: 13,
-    },
-    tagRow: { flexDirection: "row", gap: 8, flex: 1 },
-    tag: { color: c.gold, fontSize: 10 },
-    empty: { alignItems: "center", padding: 35 },
-    emptyTitle: { color: c.text, fontWeight: "700", marginTop: 10 },
-    emptyCopy: {
-      color: c.muted,
-      textAlign: "center",
-      fontSize: 11,
-      lineHeight: 17,
-      marginTop: 5,
-    },
+    emptyFull: { flex: 1, alignItems: "center", justifyContent: "center", padding: 28 },
+    emptyTitle: { color: c.text, fontSize: 19, fontWeight: "900", textAlign: "center", marginTop: 10 },
+    emptyCopy: { color: c.muted, textAlign: "center", lineHeight: 20, marginTop: 8 },
+    primary: { minHeight: 48, borderRadius: 13, backgroundColor: c.green, alignItems: "center", justifyContent: "center", paddingHorizontal: 18, marginTop: 18 },
+    primaryText: { color: c.onAccent, fontWeight: "900" },
+    summary: { minHeight: 76, paddingHorizontal: 18, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderColor: c.line },
+    summaryLabel: { color: c.muted, fontSize: 10, fontWeight: "800", letterSpacing: 1.2 },
+    summaryValue: { color: c.text, fontSize: 20, fontWeight: "900", marginTop: 3 },
+    newButton: { height: 42, borderRadius: 12, backgroundColor: c.green, flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12 },
+    newText: { color: c.onAccent, fontWeight: "900" },
+    growth: { margin: 18, marginBottom: 10, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: 16, padding: 15 },
+    growthTitle: { color: c.text, fontWeight: "900" },
+    growthCopy: { color: c.muted, fontSize: 12, lineHeight: 19, marginTop: 5 },
+    themePanel: { margin: 18, marginBottom: 10, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: 16, padding: 15 },
+    panelHeader: { flexDirection: "row", justifyContent: "space-between", gap: 10, marginBottom: 10 },
+    panelTitle: { color: c.text, fontWeight: "900" },
+    panelCopy: { color: c.muted, fontSize: 11, marginTop: 3 },
+    panelLink: { color: c.green, fontWeight: "900", fontSize: 12 },
+    themeRow: { minHeight: 34, flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderTopWidth: 1, borderColor: c.line },
+    themeName: { color: c.text, fontWeight: "800" },
+    themeCount: { color: c.muted, fontSize: 11 },
+    muted: { color: c.muted, fontSize: 12 },
+    connections: { minHeight: 40, flexDirection: "row", alignItems: "center", gap: 7, marginTop: 8 },
+    connectionsText: { color: c.green, fontWeight: "900" },
+    tools: { flexDirection: "row", gap: 8, paddingHorizontal: 18, paddingTop: 8, paddingBottom: 10 },
+    search: { flex: 1, height: 46, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: c.surface, borderRadius: 13, borderWidth: 1, borderColor: c.line, paddingHorizontal: 12 },
+    searchInput: { flex: 1, color: c.text, fontSize: 13 },
+    filterButton: { width: 46, height: 46, borderRadius: 13, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, alignItems: "center", justifyContent: "center" },
+    filterButtonActive: { backgroundColor: c.green, borderColor: c.green },
+    filterCount: { position: "absolute", top: 5, right: 7, color: c.onAccent, fontSize: 9, fontWeight: "900" },
+    list: { padding: 18, paddingTop: 4, paddingBottom: 32 },
+    empty: { alignItems: "center", padding: 28 },
+    card: { backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, borderRadius: 16, padding: 15, marginBottom: 11 },
+    pressed: { opacity: 0.75 },
+    metaRow: { flexDirection: "row", justifyContent: "space-between", gap: 8 },
+    reference: { color: c.green, fontSize: 10, fontWeight: "900", letterSpacing: 0.8 },
+    groupLabel: { color: c.muted, fontSize: 9, textTransform: "uppercase", letterSpacing: 0.8 },
+    title: { color: c.text, fontSize: 16, fontWeight: "900", marginTop: 8 },
+    noteBody: { color: c.muted, fontSize: 12, lineHeight: 18, marginTop: 6 },
+    cardBottom: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 12 },
+    tagRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, flex: 1 },
+    tag: { color: c.gold, fontSize: 10, fontWeight: "800" },
     overlay: { flex: 1, justifyContent: "flex-end" },
-    scrim: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: "rgba(0,0,0,.45)",
-    },
-    sheet: {
-      width: "100%",
-      maxWidth: 520,
-      maxHeight: "68%",
-      alignSelf: "center",
-      backgroundColor: c.bg,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      padding: 16,
-      paddingBottom: 22,
-      borderWidth: 1,
-      borderColor: c.line,
-    },
-    sheetHeader: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: 10,
-    },
-    sheetTitle: { color: c.text, fontSize: 20, fontWeight: "700" },
+    scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,.45)" },
+    sheet: { maxHeight: "78%", backgroundColor: c.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 28, borderWidth: 1, borderColor: c.line },
+    sheetHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 18 },
+    sheetTitle: { color: c.text, fontSize: 20, fontWeight: "900" },
     sheetSubtitle: { color: c.muted, fontSize: 11, marginTop: 3 },
-    close: {
-      width: 44,
-      height: 44,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    label: {
-      color: c.muted,
-      fontSize: 10,
-      fontWeight: "700",
-      letterSpacing: 1.2,
-      marginTop: 6,
-      marginBottom: 6,
-    },
-    horizontalOptions: { gap: 8, paddingRight: 12, paddingBottom: 10 },
-    options: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 8,
-      marginBottom: 8,
-    },
-    option: {
-      minHeight: 38,
-      paddingHorizontal: 13,
-      borderRadius: 21,
-      backgroundColor: c.surface,
-      borderWidth: 1,
-      borderColor: c.line,
-      justifyContent: "center",
-    },
-    optionActive: { backgroundColor: c.green },
+    close: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+    label: { color: c.muted, fontSize: 10, fontWeight: "800", letterSpacing: 1.2, marginBottom: 7 },
+    horizontalOptions: { gap: 8, paddingBottom: 18 },
+    options: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 },
+    option: { minHeight: 40, justifyContent: "center", paddingHorizontal: 12, borderRadius: 20, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line },
+    optionActive: { backgroundColor: c.green, borderColor: c.green },
     optionText: { color: c.text, fontSize: 11 },
-    optionTextActive: { color: c.onAccent, fontWeight: "700" },
-    sheetActions: { flexDirection: "row", gap: 10, marginTop: 6 },
-    reset: {
-      flex: 1,
-      height: 48,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: c.line,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    resetText: { color: c.text, fontWeight: "700" },
-    apply: {
-      flex: 2,
-      height: 48,
-      borderRadius: 12,
-      backgroundColor: c.green,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    applyText: { color: c.onAccent, fontWeight: "800" },
+    optionTextActive: { color: c.onAccent, fontWeight: "900" },
+    actions: { flexDirection: "row", gap: 10, marginTop: 6 },
+    reset: { flex: 1, height: 48, borderRadius: 12, borderWidth: 1, borderColor: c.line, alignItems: "center", justifyContent: "center" },
+    resetText: { color: c.text, fontWeight: "800" },
+    apply: { flex: 2, height: 48, borderRadius: 12, backgroundColor: c.green, alignItems: "center", justifyContent: "center" },
+    applyText: { color: c.onAccent, fontWeight: "900" },
   });

@@ -3,18 +3,18 @@ import { expect, test } from "@playwright/test";
 test("Garden creates, persists, edits, filters, and deletes a reflection", async ({
   page,
 }) => {
-  await page.goto("/garden");
-  await page.getByLabel("New note").click();
-  await page.getByLabel("Scripture reference").fill("Romans 12:2");
-  await page.getByLabel("Reflection title").fill("A renewed mind");
+  await page.goto("/");
+  await page.getByLabel("Reflect on this passage").click();
   await page
-    .getByPlaceholder("What are you noticing?")
+    .getByLabel("Reflection text")
     .fill("Transformation begins with renewed patterns of thought.");
+  await page.getByText("Add details").click();
+  await page.getByLabel("Reflection title").fill("A renewed mind");
   await page.getByText("Application", { exact: true }).last().click();
-  await page.getByText("Add Tag").click();
+  await page.getByText("Add Theme").click();
   await page.getByText("#Grace", { exact: true }).click();
   await page.getByText("Done", { exact: true }).click();
-  await page.getByText("Save reflection").click();
+  await page.getByText("Save to Garden").click();
   await expect(
     page.getByText("A renewed mind", { exact: true }).last(),
   ).toBeVisible();
@@ -27,9 +27,9 @@ test("Garden creates, persists, edits, filters, and deletes a reflection", async
   await page.getByLabel("Edit reflection").click();
   await page.getByLabel("Reflection title").fill("Renewed patterns");
   await page
-    .getByPlaceholder("What are you noticing?")
+    .getByLabel("Reflection text")
     .fill("Renewed thinking produces transformed living.");
-  await page.getByText("Save changes").click();
+  await page.getByText("Save to Garden").click();
   await expect(
     page.getByText("Renewed patterns", { exact: true }).last(),
   ).toBeVisible();
@@ -40,14 +40,10 @@ test("Garden creates, persists, edits, filters, and deletes a reflection", async
 
   await page.getByLabel("Advanced filters").click();
   await page.getByText("Application", { exact: true }).last().click();
-  await page.getByText(/Show 1/).click();
+  await page.getByText("Apply").click();
   await expect(
     page.getByText("Renewed patterns", { exact: true }).last(),
   ).toBeVisible();
-  await expect(
-    page.getByText("Life moving over chaos", { exact: true }),
-  ).toHaveCount(0);
-
   await page.getByText("Renewed patterns", { exact: true }).last().click();
   await page.getByLabel("Delete reflection").click();
   await page.getByLabel("Confirm delete reflection").click();
@@ -67,11 +63,14 @@ test("Bookmark color palette scrolls to every color", async ({ page }) => {
 });
 
 test("Garden uses one compact advanced-filter surface", async ({ page }) => {
-  await page.goto("/garden");
+  await page.goto("/");
+  await page.getByLabel("Reflect on this passage").click();
+  await page.getByLabel("Reflection text").fill("Filterable reflection");
+  await page.getByText("Save to Garden").click();
   await expect(page.getByText("All", { exact: true })).toHaveCount(0);
   await page.getByLabel("Advanced filters").click();
   const title = page.getByText("Filter Garden", { exact: true });
-  const apply = page.getByText(/Show \d+/);
+  const apply = page.getByText("Apply", { exact: true });
   await expect(title).toBeVisible();
   await expect(apply).toBeVisible();
   const titleBox = await title.boundingBox();

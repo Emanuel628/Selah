@@ -18,62 +18,95 @@ import { THOUGHT_GROUPS, ThoughtGroup, useGarden } from "@/state/Garden";
 import { useAppSettings } from "@/state/AppSettings";
 import { useThemeColors } from "@/state/useThemeColors";
 
-const suggestions = [
-  "Reflection",
-  "Sovereignty",
-  "Grace",
-  "Covenants",
-  "Prayer",
-  "Promise",
-];
+const suggestions = ["Grace", "Covenant", "Prayer", "Promise", "Creation"];
+
+function excerptTitle(body: string) {
+  const first = body.trim().split(/[.!?]\s/)[0] || "Untitled reflection";
+  return first.length > 54 ? `${first.slice(0, 51).trim()}...` : first;
+}
+
 export default function NoteEditor() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ id?: string }>();
+  const params = useLocalSearchParams<{
+    id?: string;
+    verseStart?: string;
+    verseEnd?: string;
+    reference?: string;
+  }>();
   const { getNote, createNote, updateNote } = useGarden();
   const settings = useAppSettings();
   const existing = params.id ? getNote(params.id) : undefined;
   const c = useThemeColors();
   const s = useMemo(() => styles(c), [c]);
+  const verseStart = Number(params.verseStart || existing?.verseStart || 1);
+  const verseEnd = Number(params.verseEnd || existing?.verseEnd || verseStart);
+  const preciseReference =
+    params.reference ||
+    `${settings.currentBookName} ${settings.currentChapter}:${verseStart}${
+      verseEnd > verseStart ? `-${verseEnd}` : ""
+    }`;
   const [title, setTitle] = useState(existing?.title || "");
   const [body, setBody] = useState(existing?.body || "");
-  const preciseReference = `${settings.currentBookName} ${settings.currentChapter} · Page ${settings.currentPage}`;
-  const [reference, setReference] = useState(
-    existing?.reference || preciseReference,
+  const [reference] = useState(existing?.reference || preciseReference);
+  const [group, setGroup] = useState<ThoughtGroup | null>(
+    existing?.group || null,
   );
-  const [group, setGroup] = useState<ThoughtGroup>(
-    existing?.group || "Observation",
-  );
-  const [tags, setTags] = useState<string[]>(existing?.tags || ["Reflection"]);
+  const [tags, setTags] = useState<string[]>(existing?.tags || []);
+  const [detailsOpen, setDetailsOpen] = useState(!!existing);
   const [tagOpen, setTagOpen] = useState(false);
   const [custom, setCustom] = useState("");
+  const [guidedOpen, setGuidedOpen] = useState(false);
+  const [guided, setGuided] = useState({
+    notice: "",
+    meaning: "",
+    connection: "",
+    question: "",
+    response: "",
+  });
+
   useEffect(() => {
-    if (existing) {
-      setTitle(existing.title);
-      setBody(existing.body);
-      setReference(existing.reference);
-      setGroup(existing.group);
-      setTags(existing.tags);
-    }
+    if (!existing) return;
+    setTitle(existing.title);
+    setBody(existing.body);
+    setGroup(existing.group);
+    setTags(existing.tags);
   }, [existing?.id]);
+
   const toggle = (tag: string) =>
     setTags((current) =>
       current.includes(tag)
         ? current.filter((item) => item !== tag)
         : [...current, tag],
     );
+
   const addCustom = () => {
     const clean = custom.trim().replace(/^#/, "");
     if (clean && !tags.some((tag) => tag.toLowerCase() === clean.toLowerCase()))
       setTags((current) => [...current, clean]);
     setCustom("");
   };
-  const valid = title.trim() && body.trim();
+
+  const applyGuided = () => {
+    const parts = [
+      guided.notice && `What I notice: ${guided.notice}`,
+      guided.meaning && `What it may mean: ${guided.meaning}`,
+      guided.connection && `Connection: ${guided.connection}`,
+      guided.question && `Question: ${guided.question}`,
+      guided.response && `Response or prayer: ${guided.response}`,
+    ].filter(Boolean);
+    setBody((current) => [current.trim(), parts.join("\n\n")]
+      .filter(Boolean)
+      .join("\n\n"));
+    setGuidedOpen(false);
+  };
+
+  const valid = body.trim().length > 0;
   const save = () => {
     if (!valid) return;
     const input = {
-      title: title.trim(),
+      title: title.trim() || excerptTitle(body),
       body: body.trim(),
-      reference: reference.trim() || preciseReference,
+      reference,
       translationId: existing?.translationId || settings.preferredTranslationId,
       bookId: existing?.bookId ?? settings.currentBookId,
       bookName: existing?.bookName || settings.currentBookName,
@@ -81,15 +114,17 @@ export default function NoteEditor() {
       page: existing?.page || settings.currentPage,
       group,
       tags,
+      verseStart: existing?.verseStart ?? verseStart,
+      verseEnd: existing?.verseEnd ?? verseEnd,
+      status: existing?.status || "open",
+      origin: existing?.origin || "user_written",
+      lastRevisitedAt: existing?.lastRevisitedAt || null,
     };
-    if (existing) {
-      updateNote(existing.id, input);
-      router.replace("/garden");
-    } else {
-      createNote(input);
-      router.replace("/garden");
-    }
+    if (existing) updateNote(existing.id, input);
+    else createNote(input);
+    router.replace("/garden");
   };
+
   return (
     <DetailScreen
       title={existing ? "Edit reflection" : "New reflection"}
@@ -100,162 +135,175 @@ export default function NoteEditor() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={s.body}
       >
-        <Text style={s.label}>SCRIPTURE ANCHOR</Text>
+        <View style={s.anchor}>
+          <Text style={s.anchorRef}>{reference}</Text>
+          <Text style={s.anchorSub}>{settings.preferredTranslationName}</Text>
+        </View>
+        <Text style={s.prompt}>What stayed with you?</Text>
         <TextInput
-          accessibilityLabel="Scripture reference"
-          value={reference}
-          onChangeText={setReference}
-          placeholder="Genesis 1:2"
-          placeholderTextColor={c.muted}
-          style={s.singleInput}
-        />
-        <Text style={s.label}>TITLE</Text>
-        <TextInput
-          accessibilityLabel="Reflection title"
-          value={title}
-          onChangeText={setTitle}
-          placeholder="Name this insight"
-          placeholderTextColor={c.muted}
-          style={s.singleInput}
-        />
-        <Text style={s.label}>REFLECTION</Text>
-        <TextInput
+          accessibilityLabel="Reflection text"
           multiline
+          autoFocus={!existing}
           textAlignVertical="top"
           value={body}
           onChangeText={setBody}
-          placeholder="What are you noticing?"
+          placeholder="Write the thought, question, prayer, or application you want to remember."
           placeholderTextColor={c.muted}
           style={s.input}
         />
-        <Text style={s.label}>THOUGHT GROUP</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={s.groups}
+        <Pressable onPress={() => setGuidedOpen(true)} style={s.guided}>
+          <Ionicons name="help-circle-outline" size={17} color={c.green} />
+          <Text style={s.guidedText}>Need help thinking this through?</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setDetailsOpen((value) => !value)}
+          style={s.detailsToggle}
         >
-          {THOUGHT_GROUPS.map((item) => (
-            <Pressable
-              key={item}
-              onPress={() => setGroup(item)}
-              style={[s.group, group === item && s.groupActive]}
+          <Text style={s.detailsText}>Add details — optional</Text>
+          <Ionicons
+            name={detailsOpen ? "chevron-up" : "chevron-down"}
+            size={18}
+            color={c.muted}
+          />
+        </Pressable>
+        {detailsOpen && (
+          <View style={s.details}>
+            <Text style={s.label}>TITLE</Text>
+            <TextInput
+              accessibilityLabel="Reflection title"
+              value={title}
+              onChangeText={setTitle}
+              placeholder="Optional"
+              placeholderTextColor={c.muted}
+              style={s.singleInput}
+            />
+            <Text style={s.label}>THOUGHT TYPE</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={s.groups}
             >
-              <Text style={[s.groupText, group === item && s.groupTextActive]}>
-                {item}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-        <Text style={s.label}>TAGS</Text>
-        <View style={s.tags}>
-          {tags.map((tag) => (
-            <Pressable
-              accessibilityLabel={`Remove ${tag} tag`}
-              key={tag}
-              onPress={() => toggle(tag)}
-              style={s.tag}
-            >
-              <Text style={s.tagText}>#{tag}</Text>
-              <Ionicons name="close" size={14} color={c.gold} />
-            </Pressable>
-          ))}
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => setTagOpen(true)}
-            style={s.addTag}
-          >
-            <Ionicons name="add" size={16} color={c.green} />
-            <Text style={s.addTagText}>Add Tag</Text>
-          </Pressable>
-        </View>
+              {THOUGHT_GROUPS.map((item) => (
+                <Pressable
+                  key={item}
+                  onPress={() => setGroup(group === item ? null : item)}
+                  style={[s.group, group === item && s.groupActive]}
+                >
+                  <Text
+                    style={[s.groupText, group === item && s.groupTextActive]}
+                  >
+                    {item}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+            <Text style={s.label}>THEMES</Text>
+            <View style={s.tags}>
+              {tags.map((tag) => (
+                <Pressable
+                  accessibilityLabel={`Remove ${tag} tag`}
+                  key={tag}
+                  onPress={() => toggle(tag)}
+                  style={s.tag}
+                >
+                  <Text style={s.tagText}>#{tag}</Text>
+                  <Ionicons name="close" size={14} color={c.gold} />
+                </Pressable>
+              ))}
+              <Pressable onPress={() => setTagOpen(true)} style={s.addTag}>
+                <Ionicons name="add" size={16} color={c.green} />
+                <Text style={s.addTagText}>Add Theme</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
         <Pressable
           disabled={!valid}
           onPress={save}
           style={[s.save, !valid && s.disabled]}
         >
-          <Text style={s.saveText}>
-            {existing ? "Save changes" : "Save reflection"}
-          </Text>
+          <Text style={s.saveText}>Save to Garden</Text>
         </Pressable>
       </ScrollView>
-      <Modal
-        visible={tagOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setTagOpen(false)}
-      >
+
+      <Modal visible={tagOpen} transparent animationType="slide">
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={s.overlay}
         >
           <Pressable style={s.scrim} onPress={() => setTagOpen(false)} />
           <View style={s.sheet}>
-            <ScrollView
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              <View style={s.sheetHeader}>
-                <View>
-                  <Text style={s.sheetTitle}>Add tags</Text>
-                  <Text style={s.sheetSubtitle}>
-                    Connect related reflections across your Garden.
-                  </Text>
-                </View>
+            <Text style={s.sheetTitle}>Add themes</Text>
+            <View style={s.suggestions}>
+              {suggestions.map((tag) => (
                 <Pressable
-                  accessibilityLabel="Close tag picker"
-                  onPress={() => setTagOpen(false)}
-                  style={s.close}
+                  key={tag}
+                  onPress={() => toggle(tag)}
+                  style={[s.suggestion, tags.includes(tag) && s.groupActive]}
                 >
-                  <Ionicons name="close" size={22} color={c.text} />
-                </Pressable>
-              </View>
-              <View style={s.suggestions}>
-                {suggestions.map((tag) => (
-                  <Pressable
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: tags.includes(tag) }}
-                    key={tag}
-                    onPress={() => toggle(tag)}
+                  <Text
                     style={[
-                      s.suggestion,
-                      tags.includes(tag) && s.suggestionActive,
+                      s.suggestionText,
+                      tags.includes(tag) && s.groupTextActive,
                     ]}
                   >
-                    <Text
-                      style={[
-                        s.suggestionText,
-                        tags.includes(tag) && s.suggestionTextActive,
-                      ]}
-                    >
-                      #{tag}
-                    </Text>
-                    {tags.includes(tag) && (
-                      <Ionicons name="checkmark" size={15} color={c.onAccent} />
-                    )}
-                  </Pressable>
-                ))}
-              </View>
-              <Text style={s.label}>CUSTOM TAG</Text>
-              <View style={s.customRow}>
-                <TextInput
-                  value={custom}
-                  onChangeText={setCustom}
-                  onSubmitEditing={addCustom}
-                  placeholder="Type a tag"
-                  placeholderTextColor={c.muted}
-                  style={s.customInput}
-                />
-                <Pressable
-                  accessibilityLabel="Add custom tag"
-                  disabled={!custom.trim()}
-                  onPress={addCustom}
-                  style={[s.customButton, !custom.trim() && s.disabled]}
-                >
-                  <Text style={s.customButtonText}>Add</Text>
+                    #{tag}
+                  </Text>
                 </Pressable>
-              </View>
-              <Pressable onPress={() => setTagOpen(false)} style={s.done}>
-                <Text style={s.doneText}>Done</Text>
+              ))}
+            </View>
+            <View style={s.customRow}>
+              <TextInput
+                value={custom}
+                onChangeText={setCustom}
+                onSubmitEditing={addCustom}
+                placeholder="Type a theme"
+                placeholderTextColor={c.muted}
+                style={s.customInput}
+              />
+              <Pressable onPress={addCustom} style={s.customButton}>
+                <Text style={s.customButtonText}>Add</Text>
+              </Pressable>
+            </View>
+            <Pressable onPress={() => setTagOpen(false)} style={s.done}>
+              <Text style={s.doneText}>Done</Text>
+            </Pressable>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal visible={guidedOpen} transparent animationType="slide">
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={s.overlay}
+        >
+          <Pressable style={s.scrim} onPress={() => setGuidedOpen(false)} />
+          <View style={s.sheetTall}>
+            <ScrollView keyboardShouldPersistTaps="handled">
+              <Text style={s.sheetTitle}>Guided reflection</Text>
+              {[
+                ["notice", "What do you notice in the passage?"],
+                ["meaning", "What do you think it means?"],
+                ["connection", "Does this connect to another passage or idea?"],
+                ["question", "What question remains?"],
+                ["response", "Is there a response, practice, or prayer?"],
+              ].map(([key, label]) => (
+                <View key={key} style={s.guidedField}>
+                  <Text style={s.label}>{label.toUpperCase()}</Text>
+                  <TextInput
+                    multiline
+                    value={(guided as any)[key]}
+                    onChangeText={(value) =>
+                      setGuided((current) => ({ ...current, [key]: value }))
+                    }
+                    placeholder="Optional"
+                    placeholderTextColor={c.muted}
+                    style={s.guidedInput}
+                  />
+                </View>
+              ))}
+              <Pressable onPress={applyGuided} style={s.done}>
+                <Text style={s.doneText}>Add to reflection</Text>
               </Pressable>
             </ScrollView>
           </View>
@@ -264,14 +312,51 @@ export default function NoteEditor() {
     </DetailScreen>
   );
 }
+
 const styles = (c: AppColors) =>
   StyleSheet.create({
     body: { padding: 18, paddingBottom: 38 },
+    anchor: {
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.line,
+      borderRadius: 16,
+      padding: 15,
+      marginBottom: 18,
+    },
+    anchorRef: { color: c.text, fontWeight: "900", fontSize: 16 },
+    anchorSub: { color: c.muted, fontSize: 11, marginTop: 4 },
+    prompt: { color: c.text, fontSize: 20, fontWeight: "900", marginBottom: 10 },
+    input: {
+      minHeight: 190,
+      backgroundColor: c.surface,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: c.line,
+      padding: 15,
+      color: c.text,
+      fontSize: 17,
+      lineHeight: 25,
+    },
+    guided: { flexDirection: "row", gap: 7, alignItems: "center", paddingVertical: 14 },
+    guidedText: { color: c.green, fontWeight: "800", fontSize: 12 },
+    detailsToggle: {
+      minHeight: 48,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderTopWidth: 1,
+      borderBottomWidth: 1,
+      borderColor: c.line,
+      marginBottom: 14,
+    },
+    detailsText: { color: c.text, fontWeight: "800" },
+    details: { marginBottom: 8 },
     label: {
       color: c.muted,
       fontSize: 10,
-      fontWeight: "700",
-      letterSpacing: 1.3,
+      fontWeight: "800",
+      letterSpacing: 1.2,
       marginBottom: 7,
     },
     singleInput: {
@@ -285,68 +370,55 @@ const styles = (c: AppColors) =>
       fontSize: 15,
       marginBottom: 18,
     },
-    input: {
-      minHeight: 170,
-      backgroundColor: c.surface,
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: c.line,
-      padding: 14,
-      color: c.text,
-      fontSize: 16,
-      lineHeight: 24,
-      marginBottom: 20,
-    },
-    groups: { gap: 8, paddingBottom: 20 },
+    groups: { gap: 8, paddingBottom: 18 },
     group: {
-      height: 42,
+      height: 40,
       paddingHorizontal: 13,
-      borderRadius: 21,
+      borderRadius: 20,
       backgroundColor: c.surface,
       borderWidth: 1,
       borderColor: c.line,
       justifyContent: "center",
     },
-    groupActive: { backgroundColor: c.green },
+    groupActive: { backgroundColor: c.green, borderColor: c.green },
     groupText: { color: c.text, fontSize: 11 },
-    groupTextActive: { color: c.onAccent, fontWeight: "700" },
+    groupTextActive: { color: c.onAccent, fontWeight: "800" },
     tags: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
     tag: {
-      minHeight: 42,
+      minHeight: 40,
       flexDirection: "row",
       alignItems: "center",
       gap: 3,
       backgroundColor: c.surface,
       paddingHorizontal: 10,
-      borderRadius: 21,
+      borderRadius: 20,
       borderWidth: 1,
       borderColor: c.line,
     },
     tagText: { color: c.gold },
     addTag: {
-      minHeight: 42,
+      minHeight: 40,
       flexDirection: "row",
       alignItems: "center",
       gap: 3,
-      paddingHorizontal: 10,
+      paddingHorizontal: 8,
     },
-    addTagText: { color: c.green, fontWeight: "700" },
+    addTagText: { color: c.green, fontWeight: "800" },
     save: {
       backgroundColor: c.green,
-      borderRadius: 12,
-      padding: 14,
+      borderRadius: 14,
+      padding: 15,
       alignItems: "center",
-      marginTop: 28,
+      marginTop: 18,
     },
     disabled: { opacity: 0.4 },
-    saveText: { color: c.onAccent, fontWeight: "800" },
+    saveText: { color: c.onAccent, fontWeight: "900" },
     overlay: { flex: 1, justifyContent: "flex-end" },
     scrim: {
       ...StyleSheet.absoluteFillObject,
       backgroundColor: "rgba(0,0,0,.45)",
     },
     sheet: {
-      maxHeight: "78%",
       backgroundColor: c.bg,
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
@@ -355,45 +427,33 @@ const styles = (c: AppColors) =>
       borderWidth: 1,
       borderColor: c.line,
     },
-    sheetHeader: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: 18,
+    sheetTall: {
+      maxHeight: "84%",
+      backgroundColor: c.bg,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      padding: 20,
+      paddingBottom: 28,
+      borderWidth: 1,
+      borderColor: c.line,
     },
-    sheetTitle: { color: c.text, fontSize: 20, fontWeight: "700" },
-    sheetSubtitle: { color: c.muted, fontSize: 11, marginTop: 3 },
-    close: {
-      width: 44,
-      height: 44,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    suggestions: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 9,
-      marginBottom: 22,
-    },
+    sheetTitle: { color: c.text, fontSize: 20, fontWeight: "900", marginBottom: 16 },
+    suggestions: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14 },
     suggestion: {
-      minHeight: 44,
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 4,
-      paddingHorizontal: 13,
-      borderRadius: 22,
+      minHeight: 40,
+      justifyContent: "center",
+      paddingHorizontal: 12,
+      borderRadius: 20,
       backgroundColor: c.surface,
       borderWidth: 1,
       borderColor: c.line,
     },
-    suggestionActive: { backgroundColor: c.green },
     suggestionText: { color: c.text },
-    suggestionTextActive: { color: c.onAccent, fontWeight: "700" },
     customRow: { flexDirection: "row", gap: 8 },
     customInput: {
       flex: 1,
       height: 48,
-      borderRadius: 11,
+      borderRadius: 12,
       borderWidth: 1,
       borderColor: c.line,
       backgroundColor: c.surface,
@@ -403,19 +463,30 @@ const styles = (c: AppColors) =>
     customButton: {
       minWidth: 68,
       height: 48,
-      borderRadius: 11,
+      borderRadius: 12,
       backgroundColor: c.green,
       alignItems: "center",
       justifyContent: "center",
     },
-    customButtonText: { color: c.onAccent, fontWeight: "800" },
+    customButtonText: { color: c.onAccent, fontWeight: "900" },
     done: {
       height: 48,
-      borderRadius: 12,
+      borderRadius: 13,
       backgroundColor: c.green,
       alignItems: "center",
       justifyContent: "center",
       marginTop: 18,
     },
-    doneText: { color: c.onAccent, fontWeight: "800" },
+    doneText: { color: c.onAccent, fontWeight: "900" },
+    guidedField: { marginBottom: 14 },
+    guidedInput: {
+      minHeight: 76,
+      borderRadius: 13,
+      borderWidth: 1,
+      borderColor: c.line,
+      backgroundColor: c.surface,
+      color: c.text,
+      padding: 12,
+      textAlignVertical: "top",
+    },
   });

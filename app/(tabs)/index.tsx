@@ -184,6 +184,21 @@ export default function Read() {
       .sort((a, b) => b.score - a.score)
       .slice(0, 8);
   }, [crossReferences, currentPageVerses]);
+  const currentVerseStart = currentPageVerses[0]?.number || 1;
+  const currentVerseEnd =
+    currentPageVerses[currentPageVerses.length - 1]?.number || currentVerseStart;
+  const reflectOnCurrentPassage = () => {
+    router.push({
+      pathname: "/note/new",
+      params: {
+        verseStart: String(currentVerseStart),
+        verseEnd: String(currentVerseEnd),
+        reference: `${currentBookName} ${currentChapter}:${currentVerseStart}${
+          currentVerseEnd > currentVerseStart ? `-${currentVerseEnd}` : ""
+        }`,
+      },
+    });
+  };
   const openCrossReference = async (reference: CrossReference) => {
     const data = await getChapter(
       preferredTranslationId,
@@ -472,6 +487,13 @@ export default function Read() {
           <Ionicons name="chevron-down" size={18} color={c.muted} />
         </Pressable>
         <Pressable
+          accessibilityLabel="Search Scripture"
+          onPress={() => router.push("/search" as any)}
+          style={s.iconButton}
+        >
+          <Ionicons name="search-outline" size={20} color={c.muted} />
+        </Pressable>
+        <Pressable
           accessibilityLabel="Enter full screen reading"
           onPress={() => setReaderFullscreen(true)}
           style={s.iconButton}
@@ -499,11 +521,11 @@ export default function Read() {
           />
         </Pressable>
         <Pressable
-          accessibilityLabel="Open reflection guide"
-          onPress={() => router.push("/reflection-guide" as any)}
+          accessibilityLabel="Open Settings"
+          onPress={() => router.push("/settings" as any)}
           style={s.iconButton}
         >
-          <Ionicons name="sparkles-outline" size={20} color={c.muted} />
+          <Ionicons name="options-outline" size={20} color={c.muted} />
         </Pressable>
       </View>
       {bookmark && !isBookmarked && (
@@ -590,6 +612,14 @@ export default function Read() {
             <Text style={s.source}>
               Scripture: {chapter.translation.englishName}
             </Text>
+            <Pressable
+              accessibilityLabel="Reflect on this passage"
+              onPress={reflectOnCurrentPassage}
+              style={s.reflectButton}
+            >
+              <Ionicons name="leaf-outline" size={18} color={c.onAccent} />
+              <Text style={s.reflectText}>Reflect on this passage</Text>
+            </Pressable>
             {!!pageCrossReferences.length && (
               <View style={s.crossRefPanel}>
                 <Text style={s.crossRefTitle}>RELATED PASSAGES</Text>
@@ -729,6 +759,18 @@ const styles = (c: AppColors) =>
     redLetter: { color: c.redLetter },
     num: { color: c.gold, fontSize: 11, fontWeight: "700" },
     source: { color: c.muted, fontSize: 9, textAlign: "center", marginTop: 12 },
+    reflectButton: {
+      minHeight: 50,
+      borderRadius: 14,
+      backgroundColor: c.green,
+      marginTop: 18,
+      marginBottom: 4,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+    },
+    reflectText: { color: c.onAccent, fontWeight: "900" },
     crossRefPanel: {
       borderTopWidth: 1,
       borderColor: c.line,

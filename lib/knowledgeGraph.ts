@@ -32,7 +32,7 @@ export function buildKnowledgeGraph(notes: GardenNote[]) {
 
   notes.forEach((note) => {
     add("Book", note.bookName, note);
-    add("Thought Group", note.group, note);
+    if (note.group) add("Thought Group", note.group, note);
     note.tags.forEach((tag) => add("Tag", tag, note));
   });
 

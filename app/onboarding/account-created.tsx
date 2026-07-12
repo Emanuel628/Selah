@@ -17,8 +17,8 @@ export default function AccountCreated() {
         <Ionicons name="checkmark" size={38} color={c.onAccent} />
       </View>
       <Text style={local.copy}>
-        Next, choose your Bible version, privacy preference, and account plan.
-        You can change these later in Settings.
+        Next, choose your Bible version and start reading. Your plan and other
+        preferences can be changed later from Settings.
       </Text>
       <Pressable
         onPress={() =>

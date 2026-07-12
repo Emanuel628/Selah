@@ -20,6 +20,13 @@ export const THOUGHT_GROUPS = [
   "Question",
 ] as const;
 export type ThoughtGroup = (typeof THOUGHT_GROUPS)[number];
+export type ReflectionStatus = "open" | "resolved" | "practiced" | "archived";
+export type ReflectionOrigin =
+  | "user_written"
+  | "ai_prompted"
+  | "ai_generated"
+  | "ai_edited";
+
 export type GardenNote = {
   id: string;
   translationId: string;
@@ -31,42 +38,16 @@ export type GardenNote = {
   title: string;
   body: string;
   tags: string[];
-  group: ThoughtGroup;
+  group: ThoughtGroup | null;
+  verseStart: number | null;
+  verseEnd: number | null;
+  status: ReflectionStatus;
+  origin: ReflectionOrigin;
+  lastRevisitedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
-const seed: GardenNote[] = [
-  {
-    id: "genesis-1-2",
-    translationId: "BSB",
-    bookId: "GEN",
-    bookName: "Genesis",
-    chapter: 1,
-    page: 1,
-    reference: "Genesis 1 · Page 1",
-    title: "Life moving over chaos",
-    body: "“Spirit of God” (Ruach) signifies dynamic life moving over chaos.",
-    tags: ["Sovereignty"],
-    group: "Observation",
-    createdAt: "2026-07-11T12:00:00.000Z",
-    updatedAt: "2026-07-11T12:00:00.000Z",
-  },
-  {
-    id: "john-1-1",
-    translationId: "BSB",
-    bookId: "JHN",
-    bookName: "John",
-    chapter: 1,
-    page: 1,
-    reference: "John 1 · Page 1",
-    title: "A cosmic echo",
-    body: "The connection to Genesis is a cosmic echo. Logos points to structural order.",
-    tags: ["Covenants"],
-    group: "Connection",
-    createdAt: "2026-07-10T12:00:00.000Z",
-    updatedAt: "2026-07-10T12:00:00.000Z",
-  },
-];
+
 type NoteInput = Pick<
   GardenNote,
   | "translationId"
@@ -79,7 +60,13 @@ type NoteInput = Pick<
   | "body"
   | "tags"
   | "group"
+  | "verseStart"
+  | "verseEnd"
+  | "status"
+  | "origin"
+  | "lastRevisitedAt"
 >;
+
 type GardenValue = {
   notes: GardenNote[];
   ready: boolean;
@@ -88,13 +75,16 @@ type GardenValue = {
   updateNote: (id: string, input: NoteInput) => void;
   deleteNote: (id: string) => void;
 };
+
 const Context = createContext<GardenValue | null>(null);
-const KEY = "selah.garden.notes.v2";
+const KEY = "selah.garden.notes.v3";
+
 const uuid = () =>
   "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (char) => {
     const random = Math.floor(Math.random() * 16);
     return (char === "x" ? random : (random & 3) | 8).toString(16);
   });
+
 const fromRow = (row: any): GardenNote => ({
   id: row.id,
   translationId: row.translation_id,
@@ -103,13 +93,19 @@ const fromRow = (row: any): GardenNote => ({
   chapter: row.chapter,
   page: row.page,
   reference: row.reference,
-  title: row.title,
+  title: row.title || "",
   body: row.body,
   tags: row.tags || [],
-  group: row.thought_group,
+  group: row.thought_group || null,
+  verseStart: row.verse_start ?? null,
+  verseEnd: row.verse_end ?? null,
+  status: row.status || "open",
+  origin: row.origin || "user_written",
+  lastRevisitedAt: row.last_revisited_at || null,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
+
 const toRow = (note: NoteInput) => ({
   translation_id: note.translationId,
   book_id: note.bookId,
@@ -117,15 +113,22 @@ const toRow = (note: NoteInput) => ({
   chapter: note.chapter,
   page: note.page,
   reference: note.reference,
-  title: note.title,
+  title: note.title.trim() || null,
   body: note.body,
   tags: note.tags,
-  thought_group: note.group,
+  thought_group: note.group || null,
+  verse_start: note.verseStart,
+  verse_end: note.verseEnd,
+  status: note.status,
+  origin: note.origin,
+  last_revisited_at: note.lastRevisitedAt,
 });
+
 export function GardenProvider({ children }: PropsWithChildren) {
   const { user, loading: authLoading } = useAuth();
-  const [notes, setNotes] = useState(seed);
+  const [notes, setNotes] = useState<GardenNote[]>([]);
   const [ready, setReady] = useState(false);
+
   useEffect(() => {
     if (authLoading) return;
     setReady(false);
@@ -136,32 +139,40 @@ export function GardenProvider({ children }: PropsWithChildren) {
         .order("updated_at", { ascending: false })
         .then(({ data, error }) => {
           if (!error && data) setNotes(data.map(fromRow));
+          else setNotes([]);
           setReady(true);
         });
     } else {
       AsyncStorage.getItem(KEY)
         .then((raw) => {
-          if (raw) {
-            try {
-              const saved = JSON.parse(raw);
-              if (Array.isArray(saved)) setNotes(saved);
-            } catch {}
-          } else setNotes(seed);
+          if (!raw) {
+            setNotes([]);
+            return;
+          }
+          try {
+            const saved = JSON.parse(raw);
+            setNotes(Array.isArray(saved) ? saved : []);
+          } catch {
+            setNotes([]);
+          }
         })
         .finally(() => setReady(true));
     }
   }, [user?.id, authLoading]);
+
   useEffect(() => {
     if (ready && !user) AsyncStorage.setItem(KEY, JSON.stringify(notes));
   }, [notes, ready, user]);
+
   const getNote = useCallback(
     (id: string) => notes.find((note) => note.id === id),
     [notes],
   );
+
   const createNote = useCallback(
     (input: NoteInput) => {
-      const id = uuid(),
-        now = new Date().toISOString();
+      const id = uuid();
+      const now = new Date().toISOString();
       const note = { ...input, id, createdAt: now, updatedAt: now };
       setNotes((current) => [note, ...current]);
       if (user)
@@ -176,6 +187,7 @@ export function GardenProvider({ children }: PropsWithChildren) {
     },
     [user],
   );
+
   const updateNote = useCallback(
     (id: string, input: NoteInput) => {
       setNotes((current) =>
@@ -198,6 +210,7 @@ export function GardenProvider({ children }: PropsWithChildren) {
     },
     [user],
   );
+
   const deleteNote = useCallback(
     (id: string) => {
       setNotes((current) => current.filter((note) => note.id !== id));
@@ -215,12 +228,14 @@ export function GardenProvider({ children }: PropsWithChildren) {
     },
     [user],
   );
+
   const value = useMemo(
     () => ({ notes, ready, getNote, createNote, updateNote, deleteNote }),
     [notes, ready, getNote, createNote, updateNote, deleteNote],
   );
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
+
 export function useGarden() {
   const value = useContext(Context);
   if (!value) throw new Error("Missing GardenProvider");

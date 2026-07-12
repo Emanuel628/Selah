@@ -13,7 +13,7 @@ const topEntries = (entries: string[], limit = 5) => {
 
 export function buildGardenInsights(notes: GardenNote[]) {
   const tags = topEntries(notes.flatMap((note) => note.tags));
-  const groups = topEntries(notes.map((note) => note.group));
+  const groups = topEntries(notes.map((note) => note.group).filter(Boolean) as string[]);
   const books = topEntries(notes.map((note) => note.bookName));
   const questions = notes.filter((note) => note.group === "Question");
   const applications = notes.filter((note) => note.group === "Application");

@@ -11,7 +11,7 @@ type IconName = ComponentProps<typeof Ionicons>["name"];
 const icons: Record<string, IconName> = {
   index: "book-outline",
   garden: "leaf-outline",
-  search: "search-outline",
+  revisit: "refresh-circle-outline",
   settings: "options-outline",
 };
 export default function Layout() {
@@ -39,8 +39,9 @@ export default function Layout() {
         >
           <Tabs.Screen name="index" options={{ title: "Read" }} />
           <Tabs.Screen name="garden" options={{ title: "Garden" }} />
-          <Tabs.Screen name="search" options={{ title: "Search" }} />
-          <Tabs.Screen name="settings" options={{ title: "Settings" }} />
+          <Tabs.Screen name="revisit" options={{ title: "Revisit" }} />
+          <Tabs.Screen name="search" options={{ href: null }} />
+          <Tabs.Screen name="settings" options={{ href: null }} />
         </Tabs>
       </View>
     </View>

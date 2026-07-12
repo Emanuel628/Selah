@@ -34,11 +34,11 @@ test.describe("Reader dashboard flow", () => {
     page,
   }) => {
     await page.goto("/");
-    const footerLabel = page.getByText("Settings", { exact: true }).last();
+    const footerLabel = page.getByText("Revisit", { exact: true }).last();
     const box = await footerLabel.boundingBox();
     expect(box).not.toBeNull();
     expect(box!.y + box!.height).toBeLessThanOrEqual(915 - 8);
     await footerLabel.click();
-    await expect(page.getByText("READER SETTINGS")).toBeVisible();
+    await expect(page.getByText("Three thoughts from your Garden")).toBeVisible();
   });
 });
