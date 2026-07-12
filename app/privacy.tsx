@@ -1,69 +1,118 @@
-import { useMemo, useState } from "react";
-import { ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { useMemo } from "react";
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { DetailScreen } from "@/components/DetailScreen";
+import { PRIVACY_POLICY_URL, SUPPORT_EMAIL } from "@/lib/legal";
 import { AppColors } from "@/lib/theme";
 import { useThemeColors } from "@/state/useThemeColors";
+
+const sections = [
+  [
+    "Information Selah collects",
+    "Selah collects the account information needed to create and secure your account, including your email address and optional profile name. If you create Garden reflections, highlights, bookmarks, reading preferences, reminder settings, subscription status, and Bible-version preferences, Selah stores that data so it can sync across your devices.",
+  ],
+  [
+    "Scripture and reflection data",
+    "Your Garden notes, tags, thought groups, highlights, bookmarks, and reading position are personal study data. Selah uses them to show your saved reflections, generate Garden patterns, restore your reading state, and connect related passages or notes.",
+  ],
+  [
+    "AI features",
+    "When you use AI reflection or synthesis features, Selah sends the current passage, your question, and relevant Garden notes to the AI service provider only for the purpose of generating the requested guidance. Do not enter sensitive personal information that you do not want processed for that feature.",
+  ],
+  [
+    "Payments",
+    "Subscriptions are processed by Apple through the App Store. Selah receives subscription status, product identifiers, transaction identifiers, and renewal or expiration information needed to unlock or remove Pro access. Selah does not receive your full payment card details.",
+  ],
+  [
+    "Notifications and biometrics",
+    "Study reminders are scheduled on your device after you grant notification permission. Face ID or Touch ID login uses the device biometric system and secure local credential storage. Selah does not receive or store your biometric face or fingerprint data.",
+  ],
+  [
+    "How data is protected",
+    "Selah uses Supabase authentication, row-level security, and account-scoped database records so signed-in users can access only their own personal data. Local device settings may also be stored with device storage APIs for offline or pre-login use.",
+  ],
+  [
+    "Deleting your account",
+    "You can request permanent account deletion from Settings. Deleting your account removes your login and account-scoped Selah data. If you have an active App Store subscription, cancel it in your Apple account before deleting your Selah account.",
+  ],
+  [
+    "Contact",
+    `For privacy or support questions, contact ${SUPPORT_EMAIL}.`,
+  ],
+] as const;
+
 export default function Privacy() {
-  const [lock, setLock] = useState(false);
   const c = useThemeColors();
   const s = useMemo(() => styles(c), [c]);
   return (
-    <DetailScreen title="Privacy & security">
-      <ScrollView contentContainerStyle={s.body}>
+    <DetailScreen title="Privacy Policy">
+      <ScrollView contentContainerStyle={s.body} showsVerticalScrollIndicator={false}>
+        <Text style={s.updated}>Effective date: July 12, 2026</Text>
         <Text style={s.intro}>
-          Your Garden is personal. These controls describe how Selah will
-          protect it once device services are connected.
+          Selah is a Scripture reading and reflection app. This policy explains
+          what data Selah uses, why it is used, and how users can contact us.
         </Text>
-        <View style={s.group}>
-          <View style={s.row}>
-            <View style={s.copy}>
-              <Text style={s.title}>Biometric lock</Text>
-              <Text style={s.sub}>
-                Require Face ID, Touch ID, or your device unlock.
-              </Text>
-            </View>
-            <Switch
-              value={lock}
-              onValueChange={setLock}
-              trackColor={{ false: c.muted, true: c.green }}
-              thumbColor={c.paper}
-            />
+        {sections.map(([title, copy]) => (
+          <View key={title} style={s.section}>
+            <Text style={s.title}>{title}</Text>
+            <Text style={s.copy}>{copy}</Text>
           </View>
-          <View style={s.row}>
-            <View style={s.copy}>
-              <Text style={s.title}>Local prototype data</Text>
-              <Text style={s.sub}>
-                Notes currently reset when the app reloads.
-              </Text>
-            </View>
-            <Text style={s.value}>Temporary</Text>
-          </View>
-        </View>
+        ))}
+        <Pressable
+          accessibilityLabel="Open hosted privacy policy"
+          onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}
+          style={s.linkButton}
+        >
+          <Ionicons name="open-outline" size={17} color={c.onAccent} />
+          <Text style={s.linkText}>Open Hosted Privacy Policy</Text>
+        </Pressable>
       </ScrollView>
     </DetailScreen>
   );
 }
+
 const styles = (c: AppColors) =>
   StyleSheet.create({
-    body: { padding: 18 },
-    intro: { color: c.muted, lineHeight: 20, marginBottom: 20 },
-    group: {
+    body: { padding: 18, paddingBottom: 36 },
+    updated: {
+      color: c.gold,
+      fontSize: 10,
+      fontWeight: "900",
+      letterSpacing: 1,
+      marginBottom: 8,
+      textTransform: "uppercase",
+    },
+    intro: {
+      color: c.text,
+      fontSize: 14,
+      lineHeight: 22,
+      fontWeight: "600",
       backgroundColor: c.surface,
-      borderRadius: 15,
       borderWidth: 1,
       borderColor: c.line,
-      overflow: "hidden",
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 14,
     },
-    row: {
-      minHeight: 72,
+    section: {
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.line,
+      borderRadius: 14,
       padding: 14,
+      marginBottom: 11,
+    },
+    title: { color: c.text, fontWeight: "900", marginBottom: 7 },
+    copy: { color: c.muted, fontSize: 12, lineHeight: 19 },
+    linkButton: {
+      minHeight: 48,
+      borderRadius: 13,
+      backgroundColor: c.green,
       flexDirection: "row",
       alignItems: "center",
-      borderBottomWidth: 1,
-      borderColor: c.line,
+      justifyContent: "center",
+      gap: 8,
+      marginTop: 6,
     },
-    copy: { flex: 1, paddingRight: 10 },
-    title: { color: c.text, fontWeight: "600" },
-    sub: { color: c.muted, fontSize: 11, lineHeight: 16, marginTop: 4 },
-    value: { color: c.gold, fontSize: 11, fontWeight: "600" },
+    linkText: { color: c.onAccent, fontWeight: "900" },
   });

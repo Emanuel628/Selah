@@ -226,7 +226,11 @@ const styles = (c: AppColors) =>
 
 function fallbackMessage(reason: string) {
   if (reason === "openai_401")
-    return "AI is not connected yet because OpenAI rejected the configured API key. Showing local passage prompts for now.";
+    return "AI is wired, but OpenAI rejected the configured API key. The Supabase openai_api_key secret must be a valid OpenAI API key, not a Supabase key. Showing local passage prompts for now.";
+  if (reason.includes("invalid_api_key"))
+    return "AI is wired, but OpenAI says the configured API key is invalid. The Supabase openai_api_key secret must be a valid OpenAI API key, not a Supabase key. Showing local passage prompts for now.";
+  if (reason.includes("insufficient_quota"))
+    return "AI is not connected yet because the OpenAI project has insufficient quota or billing access. Showing local passage prompts for now.";
   if (reason === "missing_openai_key")
     return "AI is not connected yet because no OpenAI API key is configured. Showing local passage prompts for now.";
   return reason

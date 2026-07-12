@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -24,6 +25,7 @@ import {
   SELAH_PRO_YEARLY_PRODUCT_ID,
   SUBSCRIPTION_FALLBACKS,
 } from "@/lib/subscriptions";
+import { PRIVACY_POLICY_URL, TERMS_OF_USE_URL } from "@/lib/legal";
 import { supabase } from "@/lib/supabase";
 import { AppColors } from "@/lib/theme";
 import { useAuth } from "@/state/Auth";
@@ -92,7 +94,7 @@ export default function Subscription() {
     }
     setTier("pro");
     setActiveProductId(productId);
-    setStatus(`Pro active Â· ${planFallback(productId).title}`);
+    setStatus(`Pro active · ${planFallback(productId).title}`);
     Alert.alert("Selah Pro active", "Your Pro access is now active.");
   };
 
@@ -146,7 +148,7 @@ export default function Subscription() {
         setStatus(
           data.subscription_tier === "pro"
             ? days
-              ? `Pro trial Â· ${days} days`
+              ? `Pro trial · ${days} days`
               : expiresAt
                 ? `${activePlan} · renews ${expiresAt.toLocaleDateString()}`
                 : `${data.subscription_status || "active"} · ${activePlan}`
@@ -306,6 +308,28 @@ export default function Subscription() {
             </Text>
           )}
           {!!message && <Text style={s.message}>{message}</Text>}
+          <Text style={s.disclosure}>
+            Payment will be charged to your Apple ID at confirmation of
+            purchase. Subscriptions automatically renew unless cancelled at
+            least 24 hours before the end of the current period. Your account
+            may be charged for renewal within 24 hours before the period ends.
+            Manage or cancel subscriptions in your Apple account settings.
+          </Text>
+          <View style={s.legalLinks}>
+            <Text
+              onPress={() => Linking.openURL(TERMS_OF_USE_URL)}
+              style={s.legalLink}
+            >
+              Terms of Use
+            </Text>
+            <Text style={s.legalDivider}>•</Text>
+            <Text
+              onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}
+              style={s.legalLink}
+            >
+              Privacy Policy
+            </Text>
+          </View>
           <Pressable
             disabled={!!busyProductId}
             onPress={restore}
@@ -349,6 +373,10 @@ function PlanOption({
   const fallback = planFallback(productId);
   const price = product?.displayPrice || fallback.price;
   const title = product?.displayName || product?.title || fallback.title;
+  const renewal =
+    productId === SELAH_PRO_YEARLY_PRODUCT_ID
+      ? "Renews yearly at $14.99/year after any free trial unless cancelled."
+      : "Renews monthly at $1.99/month after any free trial unless cancelled.";
   return (
     <Pressable
       accessibilityLabel={`${fallback.title} subscription plan`}
@@ -370,6 +398,7 @@ function PlanOption({
           <Text style={s.noticeText}>
             Includes a 30-day free trial for new subscribers. {fallback.cadence}
           </Text>
+          <Text style={s.planDisclosure}>{renewal}</Text>
         </View>
         <Ionicons
           name={selected ? "radio-button-on" : "radio-button-off"}
@@ -466,6 +495,28 @@ const styles = (c: AppColors) =>
     },
     price: { color: c.text, fontSize: 24, fontWeight: "900", marginTop: 8 },
     message: { color: c.muted, fontSize: 11, lineHeight: 17, marginTop: 10 },
+    disclosure: {
+      color: c.muted,
+      fontSize: 10,
+      lineHeight: 16,
+      marginTop: 12,
+    },
+    legalLinks: {
+      minHeight: 34,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      marginTop: 4,
+    },
+    legalLink: { color: c.green, fontSize: 11, fontWeight: "800" },
+    legalDivider: { color: c.muted, fontSize: 11 },
+    planDisclosure: {
+      color: c.muted,
+      fontSize: 10,
+      lineHeight: 15,
+      marginTop: 5,
+    },
     button: {
       height: 48,
       borderRadius: 13,

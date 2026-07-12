@@ -319,6 +319,18 @@ export default function Settings() {
             name: "Help & How to Use Selah",
             detail: "Guide",
             onPress: () => router.push("/help"),
+          })}
+          {row({
+            icon: "mail-outline",
+            name: "Contact Support",
+            detail: "Email",
+            onPress: () => router.push("/support" as any),
+          })}
+          {row({
+            icon: "shield-checkmark-outline",
+            name: "Privacy Policy",
+            detail: "Policy",
+            onPress: () => router.push("/privacy" as any),
             last: true,
           })}
         </View>

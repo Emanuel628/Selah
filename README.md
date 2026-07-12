@@ -58,10 +58,23 @@ switch appearances from Settings → Dark Mode.
 - App Store in-app purchase integration path for Selah Pro monthly and yearly purchase/restore flows
 
 ## Remaining
-- App Store Connect subscription product activation for `selah_pro_monthly` and `selah_pro_yearly`, plus production server-side receipt verification
+- Hosted Privacy Policy and Support URLs for App Store Connect review
+- App Store Connect subscription product activation for `selah_pro_monthly` and `selah_pro_yearly`
 - Email provider keys for account/subscription confirmation emails
-- OpenAI API key configuration for live AI reflection generation
-- App Store entitlement webhooks / App Store Server API secrets for automatic renewals, cancellations, and refunds
+- Valid OpenAI API key configuration for live AI reflection generation
+- App Store Server Notification webhook handling for automatic renewals, cancellations, and refunds
+
+## Compliance and billing status
+
+- In-app Privacy Policy and Support screens exist in Settings.
+- Subscription purchase UI includes plan price, term, auto-renewal disclosure,
+  Terms of Use, Privacy Policy, and Restore Purchases.
+- App Store purchase activation is server-side: the `record-app-store-purchase`
+  Supabase function verifies the Apple signed transaction before granting Pro.
+- Renewal, cancellation, refund, and grace-period updates still need App Store
+  Server Notifications before real-money release.
+- The hosted Privacy Policy and Support URLs should be replaced with production
+  URLs before App Store review.
 
 ## Technical Architecture
 - Contextual Anchoring

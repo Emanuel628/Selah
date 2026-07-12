@@ -8,6 +8,24 @@ type Note = {
   thought_group?: string | null;
 };
 
+async function openAiFailure(response: Response) {
+  const text = await response.text();
+  try {
+    const json = JSON.parse(text);
+    const code = json?.error?.code || json?.error?.type || response.status;
+    const message = json?.error?.message || text;
+    return {
+      reason: `openai_${code}`,
+      message: String(message).slice(0, 240),
+    };
+  } catch {
+    return {
+      reason: `openai_${response.status}`,
+      message: text.slice(0, 240),
+    };
+  }
+}
+
 function env(...names: string[]) {
   for (const name of names) {
     const value = Deno.env.get(name);
@@ -121,13 +139,19 @@ Deno.serve(async (req) => {
       }),
     });
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("OpenAI reflection-guide failed", response.status, errorText);
+      const failure = await openAiFailure(response);
+      console.error(
+        "OpenAI reflection-guide failed",
+        response.status,
+        failure.reason,
+        failure.message,
+      );
       return new Response(
         JSON.stringify({
           guide: fallbackGuide(passage, verseText, question || "", notes || []),
           mode: "fallback",
-          reason: `openai_${response.status}`,
+          reason: failure.reason,
+          diagnostic: failure.message,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );

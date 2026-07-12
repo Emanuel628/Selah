@@ -9,6 +9,7 @@ playwright-report/
 test-results/
 .expo-scaffold/
 supabase/.temp/
+/Apple/
 /design-preview/
 *(1).html
 *(2).html
