@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import {
   Pressable,
   Alert,
@@ -17,6 +17,7 @@ import { useThemeColors } from "@/state/useThemeColors";
 import { useAuth } from "@/state/Auth";
 import { useBiometric } from "@/state/Biometric";
 import { supabase } from "@/lib/supabase";
+import { SUBSCRIPTION_FALLBACKS } from "@/lib/subscriptions";
 
 function Setting({
   name,
@@ -107,7 +108,7 @@ export default function Settings() {
     if (!user) return;
     supabase
       .from("profiles")
-      .select("subscription_tier,trial_ends_at")
+      .select("subscription_tier,trial_ends_at,subscription_product_id")
       .eq("id", user.id)
       .maybeSingle()
       .then(({ data }) => {
@@ -119,7 +120,10 @@ export default function Settings() {
           ? Math.max(0, Math.ceil((end.getTime() - Date.now()) / 86400000))
           : null;
         setSubscriptionDetail(
-          days === null ? "Pro" : `Pro trial · ${days} days`,
+          days === null
+            ? SUBSCRIPTION_FALLBACKS[data.subscription_product_id || ""]?.title ||
+                "Pro"
+            : `Pro trial · ${days} days`,
         );
       });
   }, [user?.id]);
@@ -390,3 +394,4 @@ const styles = (c: AppColors) =>
     },
     logoutText: { color: c.danger, fontWeight: "700" },
   });
+

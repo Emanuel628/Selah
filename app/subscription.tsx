@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -10,15 +10,18 @@ import {
   Text,
   View,
 } from "react-native";
-import { useIAP, type Purchase } from "expo-iap";
+import { useIAP, type ProductSubscription, type Purchase } from "expo-iap";
 import { DetailScreen } from "@/components/DetailScreen";
+import {
+  SELAH_PRO_MONTHLY_PRODUCT_ID,
+  SELAH_PRO_PRODUCT_IDS,
+  SELAH_PRO_YEARLY_PRODUCT_ID,
+  SUBSCRIPTION_FALLBACKS,
+} from "@/lib/subscriptions";
 import { supabase } from "@/lib/supabase";
 import { AppColors } from "@/lib/theme";
 import { useAuth } from "@/state/Auth";
 import { useThemeColors } from "@/state/useThemeColors";
-
-const PRODUCT_ID =
-  process.env.EXPO_PUBLIC_SELAH_PRO_PRODUCT_ID || "selah_pro_monthly";
 
 const features = [
   "Full Scripture search",
@@ -29,29 +32,48 @@ const features = [
   "Knowledge Graph connections",
 ];
 
+type PlanId = typeof SELAH_PRO_MONTHLY_PRODUCT_ID | typeof SELAH_PRO_YEARLY_PRODUCT_ID;
+
+function planFallback(productId: string) {
+  return (
+    SUBSCRIPTION_FALLBACKS[productId] || {
+      title: productId,
+      price: "Price unavailable",
+      cadence: "",
+      cta: "Start Selah Pro",
+    }
+  );
+}
+
 export default function Subscription() {
   const { user } = useAuth();
   const c = useThemeColors();
   const s = useMemo(() => styles(c), [c]);
+  const pendingProductId = useRef<string>(SELAH_PRO_MONTHLY_PRODUCT_ID);
   const [tier, setTier] = useState<"free" | "pro">("free");
   const [status, setStatus] = useState("Free");
-  const [busy, setBusy] = useState(false);
+  const [activeProductId, setActiveProductId] = useState<string | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState<PlanId>(
+    SELAH_PRO_YEARLY_PRODUCT_ID,
+  );
+  const [busyProductId, setBusyProductId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
 
-  const recordPurchase = async (purchase: Purchase) => {
+  const recordPurchase = async (purchase: Purchase, productId: string) => {
     if (!user) return;
-    setBusy(true);
+    setBusyProductId(productId);
     const { error } = await supabase.functions.invoke(
       "record-app-store-purchase",
-      { body: { purchase, productId: PRODUCT_ID } },
+      { body: { purchase, productId } },
     );
-    setBusy(false);
+    setBusyProductId(null);
     if (error) {
       Alert.alert("Purchase received", error.message);
       return;
     }
     setTier("pro");
-    setStatus("Pro active");
+    setActiveProductId(productId);
+    setStatus(`Pro active · ${planFallback(productId).title}`);
     Alert.alert("Selah Pro active", "Your Pro access is now active.");
   };
 
@@ -65,32 +87,45 @@ export default function Subscription() {
     hasActiveSubscriptions,
   } = useIAP({
     onPurchaseSuccess: async (purchase) => {
-      await recordPurchase(purchase);
+      const productId = pendingProductId.current;
+      await recordPurchase(purchase, productId);
       await finishTransaction({ purchase, isConsumable: false });
     },
-    onPurchaseError: (error) => setMessage(error.message),
-    onError: (error) => setMessage(error.message),
+    onPurchaseError: (error) => {
+      setBusyProductId(null);
+      setMessage(error.message);
+    },
+    onError: (error) => {
+      setBusyProductId(null);
+      setMessage(error.message);
+    },
   });
 
   useEffect(() => {
     if (!user) return;
     supabase
       .from("profiles")
-      .select("subscription_tier,subscription_status,trial_ends_at")
+      .select(
+        "subscription_tier,subscription_status,trial_ends_at,subscription_product_id",
+      )
       .eq("id", user.id)
       .maybeSingle()
       .then(({ data }) => {
         if (!data) return;
         setTier(data.subscription_tier || "free");
+        setActiveProductId(data.subscription_product_id || null);
         const trialEnd = data.trial_ends_at ? new Date(data.trial_ends_at) : null;
         const days = trialEnd
           ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86400000))
           : null;
+        const activePlan = data.subscription_product_id
+          ? planFallback(data.subscription_product_id).title
+          : "Selah Pro";
         setStatus(
           data.subscription_tier === "pro"
             ? days
               ? `Pro trial · ${days} days`
-              : data.subscription_status || "Pro active"
+              : `${data.subscription_status || "active"} · ${activePlan}`
             : "Free",
         );
       });
@@ -98,52 +133,82 @@ export default function Subscription() {
 
   useEffect(() => {
     if (!connected) return;
-    fetchProducts({ skus: [PRODUCT_ID], type: "subs" }).catch(() => {});
+    fetchProducts({ skus: SELAH_PRO_PRODUCT_IDS, type: "subs" }).catch(() => {});
   }, [connected, fetchProducts]);
 
-  const product = subscriptions.find((item) => item.id === PRODUCT_ID);
+  const productsById = useMemo(() => {
+    const map: Record<string, ProductSubscription | undefined> = {};
+    subscriptions.forEach((item) => {
+      map[item.id] = item;
+    });
+    return map;
+  }, [subscriptions]);
 
-  const buy = async () => {
+  const buy = async (productId: string) => {
     if (!user) {
       Alert.alert("Sign in required", "Create an account or sign in first.");
       return;
     }
+    setSelectedProductId(productId as PlanId);
     setMessage("");
-    if (!product) {
+    const product = productsById[productId];
+    if (!product && Platform.OS !== "web") {
       setMessage(
-        "The App Store subscription product is not available yet. Confirm the product ID in App Store Connect.",
+        `${planFallback(productId).title} is not available yet. Confirm the Product ID in App Store Connect.`,
       );
       return;
     }
+    pendingProductId.current = productId;
+    setBusyProductId(productId);
     await requestPurchase({
       type: "subs",
       request: {
-        ios: { sku: PRODUCT_ID },
-        apple: { sku: PRODUCT_ID },
-        android: { skus: [PRODUCT_ID] },
-        google: { skus: [PRODUCT_ID] },
+        ios: { sku: productId },
+        apple: { sku: productId },
+        android: { skus: [productId] },
+        google: { skus: [productId] },
       },
     });
   };
 
   const restore = async () => {
+    if (!user) {
+      Alert.alert("Sign in required", "Create an account or sign in first.");
+      return;
+    }
     setMessage("");
-    setBusy(true);
+    setBusyProductId("restore");
     await restorePurchases();
-    const active = await hasActiveSubscriptions([PRODUCT_ID]);
-    setBusy(false);
-    if (active) {
+    let restoredProductId: string | null = null;
+    for (const productId of SELAH_PRO_PRODUCT_IDS) {
+      if (await hasActiveSubscriptions([productId])) {
+        restoredProductId = productId;
+        break;
+      }
+    }
+    if (restoredProductId) {
+      const { error } = await supabase.functions.invoke(
+        "record-app-store-purchase",
+        { body: { restore: true, productId: restoredProductId } },
+      );
+      setBusyProductId(null);
+      if (error) {
+        setMessage(error.message);
+        return;
+      }
       setTier("pro");
-      setStatus("Pro active");
+      setActiveProductId(restoredProductId);
+      setStatus(`Pro active · ${planFallback(restoredProductId).title}`);
       setMessage("Purchase restored. Pro access is active.");
     } else {
+      setBusyProductId(null);
       setMessage("No active Selah Pro subscription was found for this Apple ID.");
     }
   };
 
   return (
     <DetailScreen title="Your Selah plan">
-      <ScrollView contentContainerStyle={s.body}>
+      <ScrollView contentContainerStyle={s.body} showsVerticalScrollIndicator={false}>
         <View style={s.card}>
           <Text style={s.eyebrow}>CURRENT PLAN</Text>
           <Text style={s.title}>{tier === "pro" ? "Selah Pro" : "Selah Free"}</Text>
@@ -161,11 +226,34 @@ export default function Subscription() {
         </View>
 
         <View style={s.notice}>
-          <Text style={s.noticeTitle}>App Store subscription</Text>
+          <Text style={s.noticeTitle}>Choose a Selah Pro plan</Text>
           <Text style={s.noticeText}>
-            Product: {product?.displayName || product?.title || PRODUCT_ID}
+            Both plans unlock the same Pro features. Yearly saves compared with
+            paying monthly for a full year.
           </Text>
-          <Text style={s.price}>{product?.displayPrice || "Price unavailable"}</Text>
+          <PlanOption
+            c={c}
+            s={s}
+            productId={SELAH_PRO_MONTHLY_PRODUCT_ID}
+            selected={selectedProductId === SELAH_PRO_MONTHLY_PRODUCT_ID}
+            active={activeProductId === SELAH_PRO_MONTHLY_PRODUCT_ID}
+            product={productsById[SELAH_PRO_MONTHLY_PRODUCT_ID]}
+            busy={busyProductId === SELAH_PRO_MONTHLY_PRODUCT_ID}
+            onSelect={() => setSelectedProductId(SELAH_PRO_MONTHLY_PRODUCT_ID)}
+            onBuy={() => buy(SELAH_PRO_MONTHLY_PRODUCT_ID)}
+          />
+          <PlanOption
+            c={c}
+            s={s}
+            productId={SELAH_PRO_YEARLY_PRODUCT_ID}
+            selected={selectedProductId === SELAH_PRO_YEARLY_PRODUCT_ID}
+            active={activeProductId === SELAH_PRO_YEARLY_PRODUCT_ID}
+            product={productsById[SELAH_PRO_YEARLY_PRODUCT_ID]}
+            busy={busyProductId === SELAH_PRO_YEARLY_PRODUCT_ID}
+            recommended
+            onSelect={() => setSelectedProductId(SELAH_PRO_YEARLY_PRODUCT_ID)}
+            onBuy={() => buy(SELAH_PRO_YEARLY_PRODUCT_ID)}
+          />
           {Platform.OS === "web" && (
             <Text style={s.noticeText}>
               Purchases must be tested on iOS through TestFlight or a development
@@ -174,22 +262,88 @@ export default function Subscription() {
           )}
           {!!message && <Text style={s.message}>{message}</Text>}
           <Pressable
-            disabled={busy}
-            onPress={buy}
-            style={[s.button, busy && s.disabled]}
+            disabled={!!busyProductId}
+            onPress={restore}
+            style={s.restore}
           >
-            {busy ? (
-              <ActivityIndicator color={c.onAccent} />
+            {busyProductId === "restore" ? (
+              <ActivityIndicator color={c.green} />
             ) : (
-              <Text style={s.buttonText}>Start Selah Pro</Text>
+              <Text style={s.restoreText}>Restore Purchases</Text>
             )}
-          </Pressable>
-          <Pressable onPress={restore} style={s.restore}>
-            <Text style={s.restoreText}>Restore Purchases</Text>
           </Pressable>
         </View>
       </ScrollView>
     </DetailScreen>
+  );
+}
+
+function PlanOption({
+  c,
+  s,
+  productId,
+  product,
+  selected,
+  active,
+  recommended,
+  busy,
+  onSelect,
+  onBuy,
+}: {
+  c: AppColors;
+  s: ReturnType<typeof styles>;
+  productId: string;
+  product?: ProductSubscription;
+  selected: boolean;
+  active: boolean;
+  recommended?: boolean;
+  busy: boolean;
+  onSelect: () => void;
+  onBuy: () => void;
+}) {
+  const fallback = planFallback(productId);
+  const price = product?.displayPrice || fallback.price;
+  const title = product?.displayName || product?.title || fallback.title;
+  return (
+    <Pressable
+      accessibilityLabel={`${fallback.title} subscription plan`}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected }}
+      onPress={onSelect}
+      style={[s.plan, selected && s.planSelected]}
+    >
+      <View style={s.planHeader}>
+        <View style={s.planCopy}>
+          <View style={s.planTitleRow}>
+            <Text style={s.planTitle}>{title}</Text>
+            {recommended && (
+              <Text style={s.badge}>BEST VALUE</Text>
+            )}
+            {active && <Text style={s.activeBadge}>ACTIVE</Text>}
+          </View>
+          <Text style={s.price}>{price}</Text>
+          <Text style={s.noticeText}>
+            Includes a 30-day free trial for new subscribers. {fallback.cadence}
+          </Text>
+        </View>
+        <Ionicons
+          name={selected ? "radio-button-on" : "radio-button-off"}
+          size={22}
+          color={selected ? c.green : c.muted}
+        />
+      </View>
+      <Pressable
+        disabled={busy}
+        onPress={onBuy}
+        style={[s.button, busy && s.disabled]}
+      >
+        {busy ? (
+          <ActivityIndicator color={c.onAccent} />
+        ) : (
+          <Text style={s.buttonText}>{fallback.cta}</Text>
+        )}
+      </Pressable>
+    </Pressable>
   );
 }
 
@@ -221,23 +375,61 @@ const styles = (c: AppColors) =>
     notice: {
       backgroundColor: c.surfaceRaised,
       borderRadius: 15,
-      padding: 17,
+      padding: 15,
       marginTop: 15,
     },
-    noticeTitle: { color: c.text, fontWeight: "800" },
+    noticeTitle: { color: c.text, fontWeight: "800", fontSize: 16 },
     noticeText: { color: c.muted, fontSize: 11, lineHeight: 18, marginTop: 6 },
-    price: { color: c.text, fontSize: 20, fontWeight: "900", marginTop: 10 },
+    plan: {
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.line,
+      borderRadius: 15,
+      padding: 14,
+      marginTop: 12,
+      gap: 12,
+    },
+    planSelected: { borderColor: c.green, borderWidth: 2 },
+    planHeader: { flexDirection: "row", gap: 10, alignItems: "flex-start" },
+    planCopy: { flex: 1 },
+    planTitleRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      alignItems: "center",
+      gap: 6,
+    },
+    planTitle: { color: c.text, fontWeight: "900", fontSize: 14 },
+    badge: {
+      color: c.onAccent,
+      backgroundColor: c.gold,
+      overflow: "hidden",
+      borderRadius: 8,
+      paddingHorizontal: 7,
+      paddingVertical: 3,
+      fontSize: 8,
+      fontWeight: "900",
+    },
+    activeBadge: {
+      color: c.onAccent,
+      backgroundColor: c.green,
+      overflow: "hidden",
+      borderRadius: 8,
+      paddingHorizontal: 7,
+      paddingVertical: 3,
+      fontSize: 8,
+      fontWeight: "900",
+    },
+    price: { color: c.text, fontSize: 24, fontWeight: "900", marginTop: 8 },
     message: { color: c.muted, fontSize: 11, lineHeight: 17, marginTop: 10 },
     button: {
-      height: 50,
-      borderRadius: 14,
+      height: 48,
+      borderRadius: 13,
       backgroundColor: c.green,
       alignItems: "center",
       justifyContent: "center",
-      marginTop: 14,
     },
     disabled: { opacity: 0.55 },
     buttonText: { color: c.onAccent, fontWeight: "900" },
-    restore: { minHeight: 44, alignItems: "center", justifyContent: "center" },
+    restore: { minHeight: 48, alignItems: "center", justifyContent: "center" },
     restoreText: { color: c.green, fontWeight: "800" },
   });

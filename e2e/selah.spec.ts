@@ -388,6 +388,20 @@ test("Settings changes highlight color and exposes saved highlights", async ({ p
   await expect(page.getByText("No highlights yet")).toBeVisible();
 });
 
+test("Subscription offers monthly and yearly Selah Pro plans", async ({ page }) => {
+  await page.goto("/settings");
+  await page.getByText("Subscription", { exact: true }).click();
+  await expect(page.getByText("Choose a Selah Pro plan")).toBeVisible();
+  await expect(page.getByText("Selah Pro Monthly")).toBeVisible();
+  await expect(page.getByText("$1.99 / month")).toBeVisible();
+  await expect(page.getByText("Start Monthly")).toBeVisible();
+  await expect(page.getByText("Selah Pro Yearly")).toBeVisible();
+  await expect(page.getByText("$14.99 / year")).toBeVisible();
+  await expect(page.getByText("BEST VALUE")).toBeVisible();
+  await expect(page.getByText("Start Yearly")).toBeVisible();
+  await expect(page.getByText("Restore Purchases")).toBeVisible();
+});
+
 test("Help explains the complete app flow", async ({ page }) => {
   await page.goto("/settings");
   await page.getByText("Help & How to Use Selah").click();

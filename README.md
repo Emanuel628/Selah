@@ -55,10 +55,10 @@ switch appearances from Settings → Dark Mode.
 - Word Study across Scripture and Garden notes
 - Knowledge Graph clusters for tags, books, thought groups, and connected notes
 - Saved Scripture highlights with preferred highlight color, exact passage/page anchoring, long-press removal, and a highlights review page
-- App Store in-app purchase integration path for Selah Pro purchase and restore flows
+- App Store in-app purchase integration path for Selah Pro monthly and yearly purchase/restore flows
 
 ## Remaining
-- App Store Connect subscription product activation and production server-side receipt verification
+- App Store Connect subscription product activation for `selah_pro_monthly` and `selah_pro_yearly`, plus production server-side receipt verification
 - Email provider keys for account/subscription confirmation emails
 - OpenAI API key configuration for live AI reflection generation
 - App Store entitlement webhooks / App Store Server API secrets for automatic renewals, cancellations, and refunds
@@ -109,3 +109,8 @@ npm run dev
 Open `http://localhost:8081`. Signed-in Garden reflections, preferences,
 bookmarks, and reminders synchronize with Supabase. Local storage remains
 available for the unauthenticated Playwright preview environment.
+
+## App Store subscription product IDs
+
+- Monthly: `selah_pro_monthly`
+- Yearly: `selah_pro_yearly`
