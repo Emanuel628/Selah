@@ -41,10 +41,14 @@ const features = [
 ];
 
 type PlanId = typeof SELAH_PRO_MONTHLY_PRODUCT_ID | typeof SELAH_PRO_YEARLY_PRODUCT_ID;
+type SubscriptionFallback =
+  (typeof SUBSCRIPTION_FALLBACKS)[keyof typeof SUBSCRIPTION_FALLBACKS];
+const SUBSCRIPTION_FALLBACK_LOOKUP: Record<string, SubscriptionFallback> =
+  SUBSCRIPTION_FALLBACKS;
 
 function planFallback(productId: string) {
   return (
-    SUBSCRIPTION_FALLBACKS[productId] || {
+    SUBSCRIPTION_FALLBACK_LOOKUP[productId] || {
       title: productId,
       price: "Price unavailable",
       cadence: "",
