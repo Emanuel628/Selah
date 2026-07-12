@@ -39,6 +39,6 @@ test.describe("Reader dashboard flow", () => {
     expect(box).not.toBeNull();
     expect(box!.y + box!.height).toBeLessThanOrEqual(915 - 8);
     await footerLabel.click();
-    await expect(page.getByText("Three thoughts from your Garden")).toBeVisible();
+    await expect(page.getByText("Worth returning to today")).toBeVisible();
   });
 });

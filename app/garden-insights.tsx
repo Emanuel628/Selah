@@ -1,216 +1,71 @@
-import { useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { useMemo } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { DetailScreen } from "@/components/DetailScreen";
-import { buildGardenInsights } from "@/lib/gardenInsights";
-import { supabase } from "@/lib/supabase";
-import { useEntitlements } from "@/lib/useEntitlements";
+import { buildInsightCards } from "@/lib/gardenEngine";
 import { AppColors } from "@/lib/theme";
-import { useAuth } from "@/state/Auth";
 import { useGarden } from "@/state/Garden";
 import { useThemeColors } from "@/state/useThemeColors";
 
 export default function GardenInsights() {
   const router = useRouter();
-  const { user } = useAuth();
-  const { notes } = useGarden();
-  const { pro } = useEntitlements();
+  const { notes, dismissedInsightIds, archiveInsight } = useGarden();
   const c = useThemeColors();
   const s = useMemo(() => styles(c), [c]);
-  const insights = useMemo(() => buildGardenInsights(notes), [notes]);
-  const [synthesis, setSynthesis] = useState("");
-  const [synthesisMode, setSynthesisMode] = useState<"algorithm" | "">("");
-  const [synthesisLoading, setSynthesisLoading] = useState(false);
-  const [synthesisError, setSynthesisError] = useState("");
-  const generateSynthesis = async () => {
-    if (!user) {
-      setSynthesisError("Sign in to generate Garden synthesis.");
-      return;
-    }
-    setSynthesisLoading(true);
-    setSynthesisError("");
-    setSynthesis("");
-    setSynthesisMode("");
-    try {
-      const { data, error } = await supabase.functions.invoke(
-        "garden-synthesis",
-        { body: { purpose: "insights" } },
-      );
-      if (error) {
-        setSynthesisError(error.message);
-        return;
-      }
-      setSynthesis(data?.synthesis || "No synthesis was returned.");
-      setSynthesisMode(data?.mode || "algorithm");
-    } catch (caught) {
-      setSynthesisError(
-        caught instanceof Error ? caught.message : "Could not generate synthesis.",
-      );
-    } finally {
-      setSynthesisLoading(false);
-    }
-  };
+  const insights = useMemo(
+    () => buildInsightCards(notes, dismissedInsightIds),
+    [notes, dismissedInsightIds],
+  );
   return (
-    <DetailScreen title="Garden Insights" subtitle="Synthesis from your notes">
+    <DetailScreen title="What Selah is noticing" subtitle="Evidence-backed patterns">
       <ScrollView contentContainerStyle={s.body} showsVerticalScrollIndicator={false}>
-        {!pro && (
-          <View style={s.locked}>
-            <Ionicons name="sparkles-outline" size={22} color={c.gold} />
-            <View style={s.lockCopy}>
-              <Text style={s.lockTitle}>Pro synthesis preview</Text>
-              <Text style={s.lockText}>
-                These insights are generated from your Garden with Selah's
-                built-in pattern engine.
+        {insights.length ? (
+          insights.map((card) => (
+            <View key={card.id} style={s.card}>
+              <Text style={s.label}>{card.label.toUpperCase()}</Text>
+              <Text style={s.headline}>{card.headline}</Text>
+              <Text style={s.explanation}>{card.explanation}</Text>
+              <Text style={s.evidence}>
+                Based on {card.evidence.length} {card.evidence.length === 1 ? "reflection" : "reflections"}
               </Text>
+              {card.evidence.map((note) => (
+                <Pressable
+                  key={note.id}
+                  onPress={() =>
+                    router.push({ pathname: "/note/[id]", params: { id: note.id } })
+                  }
+                  style={s.note}
+                >
+                  <Text style={s.noteRef}>{note.reference}</Text>
+                  <Text numberOfLines={1} style={s.noteTitle}>
+                    {note.title || note.body}
+                  </Text>
+                </Pressable>
+              ))}
+              <View style={s.actions}>
+                <Text style={s.why}>Why you’re seeing this</Text>
+                <Pressable onPress={() => archiveInsight(card.id)}>
+                  <Text style={s.dismiss}>Dismiss</Text>
+                </Pressable>
+              </View>
             </View>
-            <Pressable onPress={() => router.push("/subscription")} style={s.planButton}>
-              <Text style={s.planText}>Plan</Text>
-            </Pressable>
+          ))
+        ) : (
+          <View style={s.empty}>
+            <Text style={s.emptyTitle}>No reliable patterns yet</Text>
+            <Text style={s.emptyCopy}>
+              Selah waits for enough evidence before showing insight cards.
+            </Text>
           </View>
         )}
-        <View style={s.card}>
-          <Text style={s.eyebrow}>SYNTHESIS</Text>
-          <Text style={s.summary}>{insights.summary}</Text>
-          <Text style={s.prompt}>{insights.prompt}</Text>
-          {!!synthesisError && <Text style={s.error}>{synthesisError}</Text>}
-          {!!synthesis && (
-            <View style={s.synthesisBox}>
-              <Text style={s.synthesisLabel}>
-                {synthesisMode === "algorithm" ? "ALGORITHMIC SYNTHESIS" : "GARDEN SYNTHESIS"}
-              </Text>
-              <Text style={s.synthesisText}>{synthesis}</Text>
-            </View>
-          )}
-          <Pressable
-            disabled={synthesisLoading}
-            onPress={generateSynthesis}
-            style={[s.guideButton, synthesisLoading && s.disabled]}
-          >
-            {synthesisLoading ? (
-              <ActivityIndicator color={c.onAccent} />
-            ) : (
-              <>
-                <Ionicons name="sparkles-outline" size={17} color={c.onAccent} />
-                <Text style={s.guideText}>Generate Garden Synthesis</Text>
-              </>
-            )}
-          </Pressable>
-          <Pressable
-            onPress={() => router.push("/reflection-guide" as any)}
-            style={s.secondaryButton}
-          >
-            <Ionicons name="sparkles-outline" size={17} color={c.onAccent} />
-            <Text style={s.guideText}>Open Reflection Guide</Text>
-          </Pressable>
-        </View>
-        <Section title="Recurring Themes" items={insights.tags} c={c} s={s} />
-        <Section title="Thought Group Balance" items={insights.groups} c={c} s={s} />
-        <Section title="Most Studied Books" items={insights.books} c={c} s={s} />
-        <Notes title="Questions to Revisit" notes={insights.questions} c={c} s={s} />
-        <Notes title="Applications to Practice" notes={insights.applications} c={c} s={s} />
-        <Notes title="Connections Forming" notes={insights.connections} c={c} s={s} />
       </ScrollView>
     </DetailScreen>
-  );
-}
-
-function Section({
-  title,
-  items,
-  c,
-  s,
-}: {
-  title: string;
-  items: Array<{ name: string; count: number }>;
-  c: AppColors;
-  s: ReturnType<typeof styles>;
-}) {
-  return (
-    <View style={s.section}>
-      <Text style={s.sectionTitle}>{title}</Text>
-      {items.length ? (
-        items.map((item) => (
-          <View key={item.name} style={s.metricRow}>
-            <Text style={s.metricName}>{item.name}</Text>
-            <Text style={s.metricCount}>{item.count}</Text>
-          </View>
-        ))
-      ) : (
-        <Text style={s.empty}>Not enough reflections yet.</Text>
-      )}
-    </View>
-  );
-}
-
-function Notes({
-  title,
-  notes,
-  c,
-  s,
-}: {
-  title: string;
-  notes: Array<{ id: string; title: string; reference: string }>;
-  c: AppColors;
-  s: ReturnType<typeof styles>;
-}) {
-  const router = useRouter();
-  return (
-    <View style={s.section}>
-      <Text style={s.sectionTitle}>{title}</Text>
-      {notes.length ? (
-        notes.map((note) => (
-          <Pressable
-            key={note.id}
-            onPress={() => router.push({ pathname: "/note/[id]", params: { id: note.id } })}
-            style={s.noteRow}
-          >
-            <View style={s.noteCopy}>
-              <Text style={s.noteTitle}>{note.title}</Text>
-              <Text style={s.noteRef}>{note.reference}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={17} color={c.muted} />
-          </Pressable>
-        ))
-      ) : (
-        <Text style={s.empty}>No reflections in this group yet.</Text>
-      )}
-    </View>
   );
 }
 
 const styles = (c: AppColors) =>
   StyleSheet.create({
     body: { padding: 18, paddingBottom: 36 },
-    locked: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 10,
-      backgroundColor: c.surface,
-      borderWidth: 1,
-      borderColor: c.line,
-      borderRadius: 14,
-      padding: 13,
-      marginBottom: 12,
-    },
-    lockCopy: { flex: 1 },
-    lockTitle: { color: c.text, fontWeight: "800" },
-    lockText: { color: c.muted, fontSize: 11, lineHeight: 16, marginTop: 3 },
-    planButton: {
-      minHeight: 38,
-      paddingHorizontal: 12,
-      borderRadius: 10,
-      backgroundColor: c.green,
-      justifyContent: "center",
-    },
-    planText: { color: c.onAccent, fontWeight: "800", fontSize: 11 },
     card: {
       backgroundColor: c.surface,
       borderWidth: 1,
@@ -219,81 +74,29 @@ const styles = (c: AppColors) =>
       padding: 16,
       marginBottom: 13,
     },
-    eyebrow: {
-      color: c.gold,
-      fontSize: 9,
-      fontWeight: "900",
-      letterSpacing: 1.1,
-    },
-    summary: { color: c.text, fontSize: 17, fontWeight: "800", lineHeight: 24, marginTop: 8 },
-    prompt: { color: c.muted, fontSize: 12, lineHeight: 19, marginTop: 9 },
-    guideButton: {
-      minHeight: 44,
-      borderRadius: 12,
-      backgroundColor: c.green,
-      flexDirection: "row",
-      alignItems: "center",
+    label: { color: c.gold, fontSize: 9, fontWeight: "900", letterSpacing: 1.1 },
+    headline: { color: c.text, fontSize: 17, fontWeight: "900", lineHeight: 24, marginTop: 8 },
+    explanation: { color: c.muted, fontSize: 12, lineHeight: 19, marginTop: 8 },
+    evidence: { color: c.green, fontWeight: "800", fontSize: 11, marginTop: 10 },
+    note: {
+      minHeight: 42,
       justifyContent: "center",
-      gap: 7,
-      marginTop: 14,
-    },
-    secondaryButton: {
-      minHeight: 44,
-      borderRadius: 12,
-      backgroundColor: c.green,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 7,
-      marginTop: 10,
-      opacity: 0.86,
-    },
-    disabled: { opacity: 0.55 },
-    guideText: { color: c.onAccent, fontWeight: "900", fontSize: 12 },
-    error: { color: c.danger, fontSize: 12, marginTop: 10 },
-    synthesisBox: {
       borderTopWidth: 1,
       borderColor: c.line,
-      marginTop: 14,
-      paddingTop: 12,
+      marginTop: 8,
     },
-    synthesisLabel: {
-      color: c.gold,
-      fontSize: 9,
-      fontWeight: "900",
-      letterSpacing: 1,
-      marginBottom: 6,
-    },
-    synthesisText: { color: c.text, fontSize: 12, lineHeight: 19 },
-    section: {
+    noteRef: { color: c.green, fontSize: 10, fontWeight: "900" },
+    noteTitle: { color: c.text, fontWeight: "700", fontSize: 12, marginTop: 2 },
+    actions: { flexDirection: "row", justifyContent: "space-between", marginTop: 12 },
+    why: { color: c.muted, fontSize: 11, fontWeight: "700" },
+    dismiss: { color: c.danger, fontSize: 11, fontWeight: "800" },
+    empty: {
       backgroundColor: c.surface,
       borderWidth: 1,
       borderColor: c.line,
-      borderRadius: 14,
-      padding: 14,
-      marginBottom: 11,
+      borderRadius: 16,
+      padding: 18,
     },
-    sectionTitle: { color: c.text, fontWeight: "800", marginBottom: 10 },
-    metricRow: {
-      minHeight: 34,
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      borderBottomWidth: 1,
-      borderColor: c.line,
-    },
-    metricName: { color: c.text, fontSize: 12 },
-    metricCount: { color: c.green, fontWeight: "800" },
-    noteRow: {
-      minHeight: 46,
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-      borderBottomWidth: 1,
-      borderColor: c.line,
-    },
-    noteCopy: { flex: 1 },
-    noteTitle: { color: c.text, fontWeight: "700", fontSize: 12 },
-    noteRef: { color: c.muted, fontSize: 10, marginTop: 2 },
-    empty: { color: c.muted, fontSize: 12, lineHeight: 18 },
+    emptyTitle: { color: c.text, fontWeight: "900" },
+    emptyCopy: { color: c.muted, lineHeight: 19, marginTop: 8 },
   });

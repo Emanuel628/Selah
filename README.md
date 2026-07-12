@@ -51,7 +51,7 @@ switch appearances from Settings → Dark Mode.
 - Full Scripture search with local translation indexing
 - Cross-reference panel for the current reading page
 - Garden Insights synthesis from reflections, tags, thought groups, and books
-- Algorithmic guided reflection screen tied to the current passage and prior Garden notes
+- Guided reflection screen tied to the current passage and prior Garden notes
 - Word Study across Scripture and Garden notes
 - Knowledge Graph clusters for tags, books, thought groups, and connected notes
 - Saved Scripture highlights with preferred highlight color, exact passage/page anchoring, long-press removal, and a highlights review page

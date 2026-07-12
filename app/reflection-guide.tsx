@@ -135,7 +135,7 @@ export default function ReflectionGuide() {
         {!!guide && (
           <View style={s.result}>
             <Text style={s.eyebrow}>
-              {mode === "algorithm" ? "ALGORITHMIC GUIDED REFLECTION" : "GUIDED REFLECTION"}
+              GUIDED REFLECTION
             </Text>
             <Text style={s.guide}>{guide}</Text>
           </View>

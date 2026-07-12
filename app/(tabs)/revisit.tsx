@@ -3,32 +3,40 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Screen } from "@/components/Screen";
+import { relationshipScore } from "@/lib/gardenEngine";
 import { AppColors } from "@/lib/theme";
-import { useGarden } from "@/state/Garden";
+import { GardenNote, useGarden } from "@/state/Garden";
 import { useThemeColors } from "@/state/useThemeColors";
+
+type RevisitItem = {
+  id: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  subtitle: string;
+  body: string;
+  action: string;
+  note: GardenNote;
+};
 
 export default function Revisit() {
   const router = useRouter();
-  const { notes } = useGarden();
+  const { notes, markRevisited, markResolved, markPracticed } = useGarden();
   const c = useThemeColors();
   const s = useMemo(() => styles(c), [c]);
-  const openQuestions = notes.filter((note) => note.group === "Question");
-  const applications = notes.filter((note) => note.group === "Application");
-  const recent = [...notes].sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0];
-  const topTheme = useMemo(() => {
-    const counts = new Map<string, number>();
-    notes.forEach((note) =>
-      note.tags.forEach((tag) => counts.set(tag, (counts.get(tag) || 0) + 1)),
-    );
-    return [...counts.entries()].sort((a, b) => b[1] - a[1])[0] || null;
-  }, [notes]);
+  const queue = useMemo(() => buildQueue(notes), [notes]);
+
+  const openNote = (note: GardenNote) => {
+    markRevisited(note.id);
+    router.push({ pathname: "/note/[id]", params: { id: note.id } });
+  };
 
   return (
     <Screen title="Revisit">
       <ScrollView contentContainerStyle={s.body} showsVerticalScrollIndicator={false}>
-        <Text style={s.heroTitle}>Three thoughts from your Garden</Text>
+        <Text style={s.heroTitle}>Worth returning to today</Text>
         <Text style={s.heroCopy}>
-          Selah brings older reflections back so your Garden becomes memory, not storage.
+          Revisit is a small queue: one older reflection, one unfinished thread,
+          and one meaningful connection when Selah has enough evidence.
         </Text>
         {!notes.length && (
           <View style={s.empty}>
@@ -43,96 +51,137 @@ export default function Revisit() {
             </Pressable>
           </View>
         )}
-        {!!recent && (
+        {queue.map((item) => (
           <Card
-            icon="time-outline"
-            title="From your Garden"
-            subtitle={recent.reference}
-            body={recent.title || recent.body}
-            action="Revisit"
-            onPress={() => router.push({ pathname: "/note/[id]", params: { id: recent.id } })}
+            key={item.id}
+            item={item}
+            onOpen={() => openNote(item.note)}
+            onResolved={() => markResolved(item.note.id)}
+            onPracticed={() => markPracticed(item.note.id)}
             c={c}
             s={s}
           />
-        )}
-        {!!openQuestions[0] && (
-          <Card
-            icon="help-circle-outline"
-            title="A question you left open"
-            subtitle={openQuestions[0].reference}
-            body={openQuestions[0].body}
-            action="Add what I think now"
-            onPress={() =>
-              router.push({ pathname: "/note/[id]", params: { id: openQuestions[0].id } })
-            }
-            c={c}
-            s={s}
-          />
-        )}
-        {!!applications[0] && (
-          <Card
-            icon="checkmark-done-outline"
-            title="Something you wanted to practice"
-            subtitle={applications[0].reference}
-            body={applications[0].body}
-            action="Follow up"
-            onPress={() =>
-              router.push({ pathname: "/note/[id]", params: { id: applications[0].id } })
-            }
-            c={c}
-            s={s}
-          />
-        )}
-        {!!topTheme && (
-          <Card
-            icon="git-branch-outline"
-            title={`${topTheme[0]} keeps returning`}
-            subtitle={`${topTheme[1]} reflections`}
-            body={`You have reflected on #${topTheme[0]} more than once. Follow the thread from Garden search.`}
-            action="Open Garden"
-            onPress={() => router.push("/garden")}
-            c={c}
-            s={s}
-          />
-        )}
+        ))}
       </ScrollView>
     </Screen>
   );
 }
 
+function buildQueue(notes: GardenNote[]): RevisitItem[] {
+  const items: RevisitItem[] = [];
+  const older = [...notes]
+    .filter((note) => !note.lastRevisitedAt)
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0];
+  if (older)
+    items.push({
+      id: `older:${older.id}`,
+      icon: "time-outline",
+      title: "One older reflection",
+      subtitle: older.reference,
+      body: older.title || older.body,
+      action: "Revisit",
+      note: older,
+    });
+
+  const unfinished =
+    notes
+      .filter(
+        (note) =>
+          (note.group === "Question" || note.group === "Application") &&
+          note.status === "open",
+      )
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0] || null;
+  if (unfinished && unfinished.id !== older?.id)
+    items.push({
+      id: `unfinished:${unfinished.id}`,
+      icon:
+        unfinished.group === "Question"
+          ? "help-circle-outline"
+          : "checkmark-done-outline",
+      title:
+        unfinished.group === "Question"
+          ? "An open question"
+          : "An application to follow up",
+      subtitle: unfinished.reference,
+      body: unfinished.body,
+      action:
+        unfinished.group === "Question" ? "Mark resolved" : "I practiced this",
+      note: unfinished,
+    });
+
+  const bestConnection = findBestConnection(notes);
+  if (bestConnection && !items.some((item) => item.note.id === bestConnection.a.id)) {
+    items.push({
+      id: `connection:${bestConnection.a.id}:${bestConnection.b.id}`,
+      icon: "git-branch-outline",
+      title: "A meaningful connection",
+      subtitle: `${bestConnection.a.reference} and ${bestConnection.b.reference}`,
+      body: `${bestConnection.a.title || bestConnection.a.body} may connect with ${bestConnection.b.title || bestConnection.b.body}.`,
+      action: "Compare",
+      note: bestConnection.a,
+    });
+  }
+  return items.slice(0, 3);
+}
+
+function findBestConnection(notes: GardenNote[]) {
+  let best: { a: GardenNote; b: GardenNote; score: number } | null = null;
+  for (const a of notes) {
+    for (const b of notes) {
+      if (a.id >= b.id) continue;
+      const relation = relationshipScore(a, b);
+      if (relation.semantic < 0.16 || !relation.secondary) continue;
+      if (!best || relation.score > best.score) best = { a, b, score: relation.score };
+    }
+  }
+  return best;
+}
+
 function Card({
-  icon,
-  title,
-  subtitle,
-  body,
-  action,
-  onPress,
+  item,
+  onOpen,
+  onResolved,
+  onPracticed,
   c,
   s,
 }: {
-  icon: any;
-  title: string;
-  subtitle: string;
-  body: string;
-  action: string;
-  onPress: () => void;
+  item: RevisitItem;
+  onOpen: () => void;
+  onResolved: () => void;
+  onPracticed: () => void;
   c: AppColors;
   s: ReturnType<typeof styles>;
 }) {
   return (
-    <Pressable onPress={onPress} style={s.card}>
-      <View style={s.cardTop}>
-        <Ionicons name={icon} size={20} color={c.green} />
-        <View style={s.cardCopy}>
-          <Text style={s.cardTitle}>{title}</Text>
-          <Text style={s.cardSub}>{subtitle}</Text>
+    <View style={s.card}>
+      <Pressable onPress={onOpen}>
+        <View style={s.cardTop}>
+          <Ionicons name={item.icon} size={20} color={c.green} />
+          <View style={s.cardCopy}>
+            <Text style={s.cardTitle}>{item.title}</Text>
+            <Text style={s.cardSub}>{item.subtitle}</Text>
+          </View>
         </View>
+        <Text numberOfLines={3} style={s.cardBody}>
+          {item.body}
+        </Text>
+      </Pressable>
+      <View style={s.actions}>
+        <Pressable onPress={onOpen} style={s.secondary}>
+          <Text style={s.secondaryText}>{item.action}</Text>
+        </Pressable>
+        {item.note.group === "Question" && item.note.status === "open" && (
+          <Pressable onPress={onResolved} style={s.primarySmall}>
+            <Text style={s.primarySmallText}>Resolved</Text>
+          </Pressable>
+        )}
+        {item.note.group === "Application" && item.note.status === "open" && (
+          <Pressable onPress={onPracticed} style={s.primarySmall}>
+            <Text style={s.primarySmallText}>Practiced</Text>
+          </Pressable>
+        )}
       </View>
-      <Text numberOfLines={3} style={s.cardBody}>
-        {body}
-      </Text>
-      <Text style={s.action}>{action}</Text>
-    </Pressable>
+    </View>
   );
 }
 
@@ -175,5 +224,24 @@ const styles = (c: AppColors) =>
     cardTitle: { color: c.text, fontWeight: "900" },
     cardSub: { color: c.muted, fontSize: 11, marginTop: 2 },
     cardBody: { color: c.text, fontSize: 13, lineHeight: 20, marginTop: 12 },
-    action: { color: c.green, fontWeight: "900", marginTop: 14 },
+    actions: { flexDirection: "row", gap: 8, marginTop: 14 },
+    secondary: {
+      flex: 1,
+      minHeight: 42,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: c.line,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    secondaryText: { color: c.green, fontWeight: "900", fontSize: 12 },
+    primarySmall: {
+      flex: 1,
+      minHeight: 42,
+      borderRadius: 12,
+      backgroundColor: c.green,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    primarySmallText: { color: c.onAccent, fontWeight: "900", fontSize: 12 },
   });

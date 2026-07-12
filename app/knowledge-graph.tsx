@@ -80,9 +80,7 @@ export default function KnowledgeGraph() {
           {!!error && <Text style={s.error}>{error}</Text>}
           {!!synthesis && (
             <View style={s.summaryResult}>
-              <Text style={s.summaryLabel}>
-                {mode === "algorithm" ? "ALGORITHMIC CONNECTION SUMMARY" : "CONNECTION SUMMARY"}
-              </Text>
+              <Text style={s.summaryLabel}>WHAT SELAH IS NOTICING</Text>
               <Text style={s.summaryText}>{synthesis}</Text>
             </View>
           )}

@@ -23,9 +23,9 @@ export type ThoughtGroup = (typeof THOUGHT_GROUPS)[number];
 export type ReflectionStatus = "open" | "resolved" | "practiced" | "archived";
 export type ReflectionOrigin =
   | "user_written"
-  | "ai_prompted"
-  | "ai_generated"
-  | "ai_edited";
+  | "guided_prompted"
+  | "system_generated"
+  | "user_edited";
 
 export type GardenNote = {
   id: string;
@@ -74,6 +74,11 @@ type GardenValue = {
   createNote: (input: NoteInput) => string;
   updateNote: (id: string, input: NoteInput) => void;
   deleteNote: (id: string) => void;
+  markRevisited: (id: string) => void;
+  markResolved: (id: string) => void;
+  markPracticed: (id: string) => void;
+  archiveInsight: (insightId: string) => void;
+  dismissedInsightIds: string[];
 };
 
 const Context = createContext<GardenValue | null>(null);
@@ -124,9 +129,16 @@ const toRow = (note: NoteInput) => ({
   last_revisited_at: note.lastRevisitedAt,
 });
 
+const eventName = {
+  revisited: "revisited",
+  resolved: "resolved",
+  practiced: "practiced",
+} as const;
+
 export function GardenProvider({ children }: PropsWithChildren) {
   const { user, loading: authLoading } = useAuth();
   const [notes, setNotes] = useState<GardenNote[]>([]);
+  const [dismissedInsightIds, setDismissedInsightIds] = useState<string[]>([]);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -163,6 +175,13 @@ export function GardenProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     if (ready && !user) AsyncStorage.setItem(KEY, JSON.stringify(notes));
   }, [notes, ready, user]);
+
+  useEffect(() => {
+    const key = user ? `selah.dismissed.insights.${user.id}` : "selah.dismissed.insights.local";
+    AsyncStorage.getItem(key)
+      .then((raw) => setDismissedInsightIds(raw ? JSON.parse(raw) : []))
+      .catch(() => setDismissedInsightIds([]));
+  }, [user?.id]);
 
   const getNote = useCallback(
     (id: string) => notes.find((note) => note.id === id),
@@ -229,9 +248,103 @@ export function GardenProvider({ children }: PropsWithChildren) {
     [user],
   );
 
+  const updateStatus = useCallback(
+    (id: string, status: ReflectionStatus, eventType: keyof typeof eventName) => {
+      const now = new Date().toISOString();
+      setNotes((current) =>
+        current.map((note) =>
+          note.id === id ? { ...note, status, lastRevisitedAt: now, updatedAt: now } : note,
+        ),
+      );
+      if (user) {
+        supabase
+          .from("garden_notes")
+          .update({ status, last_revisited_at: now })
+          .eq("id", id)
+          .eq("user_id", user.id)
+          .then(
+            ({ error }) =>
+              error && console.warn("Could not update reflection status", error.message),
+          );
+        supabase
+          .from("reflection_events")
+          .insert({
+            user_id: user.id,
+            reflection_id: id,
+            event_type: eventName[eventType],
+            occurred_at: now,
+          })
+          .then(
+            ({ error }) =>
+              error && console.warn("Could not record reflection event", error.message),
+          );
+      }
+    },
+    [user],
+  );
+
+  const markRevisited = useCallback(
+    (id: string) => {
+      const note = notes.find((item) => item.id === id);
+      updateStatus(id, note?.status || "open", "revisited");
+    },
+    [notes, updateStatus],
+  );
+
+  const markResolved = useCallback(
+    (id: string) => updateStatus(id, "resolved", "resolved"),
+    [updateStatus],
+  );
+
+  const markPracticed = useCallback(
+    (id: string) => updateStatus(id, "practiced", "practiced"),
+    [updateStatus],
+  );
+
+  const archiveInsight = useCallback(
+    (insightId: string) => {
+      const key = user ? `selah.dismissed.insights.${user.id}` : "selah.dismissed.insights.local";
+      setDismissedInsightIds((current) => {
+        const next = Array.from(new Set([...current, insightId]));
+        AsyncStorage.setItem(key, JSON.stringify(next));
+        return next;
+      });
+      if (user)
+        supabase
+          .from("garden_insight_feedback")
+          .insert({ insight_id: insightId, user_id: user.id, feedback: "dismissed" })
+          .then(() => undefined);
+    },
+    [user],
+  );
+
   const value = useMemo(
-    () => ({ notes, ready, getNote, createNote, updateNote, deleteNote }),
-    [notes, ready, getNote, createNote, updateNote, deleteNote],
+    () => ({
+      notes,
+      ready,
+      getNote,
+      createNote,
+      updateNote,
+      deleteNote,
+      markRevisited,
+      markResolved,
+      markPracticed,
+      archiveInsight,
+      dismissedInsightIds,
+    }),
+    [
+      notes,
+      ready,
+      getNote,
+      createNote,
+      updateNote,
+      deleteNote,
+      markRevisited,
+      markResolved,
+      markPracticed,
+      archiveInsight,
+      dismissedInsightIds,
+    ],
   );
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }

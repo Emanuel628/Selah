@@ -10,7 +10,7 @@ import { useThemeColors } from "@/state/useThemeColors";
 export default function NoteDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { getNote, deleteNote } = useGarden();
+  const { getNote, deleteNote, markRevisited, markResolved, markPracticed } = useGarden();
   const note = getNote(id);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const c = useThemeColors();
@@ -34,6 +34,7 @@ export default function NoteDetail() {
     deleteNote(note.id);
     router.replace("/garden");
   };
+  const revisit = () => markRevisited(note.id);
   const action = (
     <Pressable
       accessibilityLabel="Edit reflection"
@@ -57,6 +58,35 @@ export default function NoteDetail() {
         </View>
         <Text style={s.title}>{note.title || note.body}</Text>
         <Text style={s.note}>{note.body}</Text>
+        <Text style={s.label}>STATUS</Text>
+        <View style={s.statusBox}>
+          <Text style={s.statusText}>
+            {note.status === "resolved"
+              ? "Resolved"
+              : note.status === "practiced"
+                ? "Practiced"
+                : note.group === "Question"
+                  ? "Open question"
+                  : note.group === "Application"
+                    ? "Open application"
+                    : "Open"}
+          </Text>
+          <View style={s.statusActions}>
+            <Pressable onPress={revisit} style={s.statusButton}>
+              <Text style={s.statusButtonText}>Revisit</Text>
+            </Pressable>
+            {note.group === "Question" && note.status === "open" && (
+              <Pressable onPress={() => markResolved(note.id)} style={s.statusButton}>
+                <Text style={s.statusButtonText}>Mark resolved</Text>
+              </Pressable>
+            )}
+            {note.group === "Application" && note.status === "open" && (
+              <Pressable onPress={() => markPracticed(note.id)} style={s.statusButton}>
+                <Text style={s.statusButtonText}>I practiced this</Text>
+              </Pressable>
+            )}
+          </View>
+        </View>
         <Text style={s.label}>SCRIPTURE ANCHOR</Text>
         <View style={s.anchor}>
           <Ionicons name="book-outline" size={19} color={c.gold} />
@@ -78,8 +108,8 @@ export default function NoteDetail() {
         <View style={s.anchor}>
           <Ionicons name="git-branch-outline" size={19} color={c.green} />
           <Text style={s.anchorText}>
-            Direct reflection links are ready in the data model. Use shared
-            themes for now; explicit links come next.
+            Connected reflections appear in Garden Browse and Insights when
+            there is enough evidence.
           </Text>
         </View>
         {!confirmDelete ? (
@@ -181,6 +211,24 @@ const styles = (c: AppColors) =>
       fontSize: 11,
     },
     noTags: { color: c.muted },
+    statusBox: {
+      backgroundColor: c.surface,
+      borderRadius: 15,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: c.line,
+      marginBottom: 24,
+    },
+    statusText: { color: c.text, fontWeight: "800" },
+    statusActions: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 },
+    statusButton: {
+      minHeight: 38,
+      borderRadius: 11,
+      backgroundColor: c.green,
+      justifyContent: "center",
+      paddingHorizontal: 12,
+    },
+    statusButtonText: { color: c.onAccent, fontWeight: "900", fontSize: 11 },
     delete: {
       height: 48,
       marginTop: 36,

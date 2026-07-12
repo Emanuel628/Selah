@@ -67,7 +67,7 @@ test("Garden uses one compact advanced-filter surface", async ({ page }) => {
   await page.getByLabel("Reflect on this passage").click();
   await page.getByLabel("Reflection text").fill("Filterable reflection");
   await page.getByText("Save to Garden").click();
-  await expect(page.getByText("All", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Reflections", { exact: true })).toBeVisible();
   await page.getByLabel("Advanced filters").click();
   const title = page.getByText("Filter Garden", { exact: true });
   const apply = page.getByText("Apply", { exact: true });

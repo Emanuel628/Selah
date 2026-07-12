@@ -8,6 +8,13 @@ type Note = {
   tags?: string[] | null;
   thought_group?: string | null;
   book_name?: string | null;
+  status?: string | null;
+  origin?: string | null;
+  verse_start?: number | null;
+  verse_end?: number | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  last_revisited_at?: string | null;
 };
 
 const STOP_WORDS = new Set([
@@ -107,8 +114,8 @@ function synthesize(notes: Note[], purpose: string) {
   const tags = countBy(notes, (note) => note.tags || []);
   const groups = countBy(notes, (note) => (note.thought_group ? [note.thought_group] : []));
   const books = countBy(notes, (note) => (note.book_name ? [note.book_name] : []));
-  const questions = notes.filter((note) => note.thought_group === "Question");
-  const applications = notes.filter((note) => note.thought_group === "Application");
+  const questions = notes.filter((note) => note.thought_group === "Question" && (note.status || "open") === "open");
+  const applications = notes.filter((note) => note.thought_group === "Application" && (note.status || "open") === "open");
   const connections = notes.filter((note) => note.thought_group === "Connection");
   const prayers = notes.filter((note) => note.thought_group === "Prayer");
   const terms = topTerms(notes);
@@ -153,13 +160,8 @@ function synthesize(notes: Note[], purpose: string) {
       ? `${compact(pair.a)} appears connected to ${compact(pair.b)}. The connection is based on shared tags, book context, thought type, and repeated wording.`
       : "No strong note-to-note pair is available yet. Add themes and thought types to create clearer connections.",
     "",
-    "Recurring language",
-    terms.length
-      ? terms.map(([term, count]) => `${term}${count > 1 ? ` (${count})` : ""}`).join(", ")
-      : "No repeated reflection language is strong enough yet.",
-    "",
     "Meaning to test",
-    `${tension} Selah is showing where your attention keeps returning, not declaring a final interpretation. Compare the pattern against Scripture before acting on it.`,
+    `${tension} Selah is showing where your attention keeps returning, not declaring a final interpretation. Compare the pattern against Scripture and the evidence reflections before acting on it.`,
     "",
     "Next step",
     action,
@@ -177,7 +179,7 @@ Deno.serve(async (req) => {
     const { purpose = "insights" } = await req.json().catch(() => ({}));
     const { data: notes } = await supabase
       .from("garden_notes")
-      .select("title,body,reference,tags,thought_group,book_name")
+      .select("title,body,reference,tags,thought_group,book_name,status,origin,verse_start,verse_end,created_at,updated_at,last_revisited_at")
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false })
       .limit(100);

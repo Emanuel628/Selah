@@ -5,9 +5,9 @@ test("primary navigation exposes Read, Garden, and Revisit", async ({ page }) =>
   await expect(page.getByText("Genesis 1", { exact: true }).first()).toBeVisible();
   await expect(page.getByLabel("Reflect on this passage")).toBeVisible();
   await page.getByText("Garden", { exact: true }).last().click();
-  await expect(page.getByText(/Your Garden begins|YOUR GARDEN/)).toBeVisible();
+  await expect(page.getByText(/Your Garden begins|Reflections/)).toBeVisible();
   await page.getByText("Revisit", { exact: true }).last().click();
-  await expect(page.getByText("Three thoughts from your Garden")).toBeVisible();
+  await expect(page.getByText("Worth returning to today")).toBeVisible();
   await page.goto("/settings");
   await expect(page.getByText("READER SETTINGS")).toBeVisible();
 });
@@ -192,7 +192,7 @@ test("Reader shows cross references for the current page", async ({ page }) => {
 
 test("Garden Insights and Connections remain available by route", async ({ page }) => {
   await page.goto("/garden-insights");
-  await expect(page.getByText("SYNTHESIS", { exact: true })).toBeVisible();
+  await expect(page.getByText("What Selah is noticing", { exact: true })).toBeVisible();
   await page.goto("/knowledge-graph");
   await expect(page.getByText("Connections", { exact: true }).first()).toBeVisible();
 });
