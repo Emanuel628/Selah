@@ -26,8 +26,7 @@ export default function ReflectionGuide() {
   const [passageText, setPassageText] = useState("");
   const [question, setQuestion] = useState("");
   const [guide, setGuide] = useState("");
-  const [mode, setMode] = useState<"ai" | "fallback" | "">("");
-  const [reason, setReason] = useState("");
+  const [mode, setMode] = useState<"algorithm" | "">("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -58,14 +57,13 @@ export default function ReflectionGuide() {
 
   const generate = async () => {
     if (!user) {
-      setError("Sign in to use AI-guided reflection with your Garden notes.");
+      setError("Sign in to use guided reflection with your Garden notes.");
       return;
     }
     setLoading(true);
     setError("");
     setGuide("");
     setMode("");
-    setReason("");
     try {
       const { data, error: invokeError } = await supabase.functions.invoke(
         "reflection-guide",
@@ -76,8 +74,7 @@ export default function ReflectionGuide() {
         return;
       }
       setGuide(data?.guide || "No guidance was returned.");
-      setMode(data?.mode || "fallback");
-      setReason(data?.reason || "");
+      setMode(data?.mode || "algorithm");
     } catch (caught) {
       setError(
         caught instanceof Error
@@ -115,8 +112,8 @@ export default function ReflectionGuide() {
         <Text style={s.helper}>
           Reflection Help is meant to read the current passage, consider your
           question, compare your Garden notes, and return an observation,
-          connection, question, application, and prayer. If AI is unavailable,
-          Selah shows local prompts instead.
+          connection, question, application, and prayer using Selah's built-in
+          reflection algorithm.
         </Text>
 
         {!!error && <Text style={s.error}>{error}</Text>}
@@ -138,11 +135,8 @@ export default function ReflectionGuide() {
         {!!guide && (
           <View style={s.result}>
             <Text style={s.eyebrow}>
-              {mode === "ai" ? "AI-GUIDED REFLECTION" : "GUIDED REFLECTION"}
+              {mode === "algorithm" ? "ALGORITHMIC GUIDED REFLECTION" : "GUIDED REFLECTION"}
             </Text>
-            {mode === "fallback" && (
-              <Text style={s.notice}>{fallbackMessage(reason)}</Text>
-            )}
             <Text style={s.guide}>{guide}</Text>
           </View>
         )}
@@ -216,24 +210,4 @@ const styles = (c: AppColors) =>
       marginTop: 14,
     },
     guide: { color: c.text, lineHeight: 22 },
-    notice: {
-      color: c.muted,
-      fontSize: 11,
-      lineHeight: 17,
-      marginBottom: 10,
-    },
   });
-
-function fallbackMessage(reason: string) {
-  if (reason === "openai_401")
-    return "AI is wired, but OpenAI rejected the configured API key. The Supabase openai_api_key secret must be a valid OpenAI API key, not a Supabase key. Showing local passage prompts for now.";
-  if (reason.includes("invalid_api_key"))
-    return "AI is wired, but OpenAI says the configured API key is invalid. The Supabase openai_api_key secret must be a valid OpenAI API key, not a Supabase key. Showing local passage prompts for now.";
-  if (reason.includes("insufficient_quota"))
-    return "AI is not connected yet because the OpenAI project has insufficient quota or billing access. Showing local passage prompts for now.";
-  if (reason === "missing_openai_key")
-    return "AI is not connected yet because no OpenAI API key is configured. Showing local passage prompts for now.";
-  return reason
-    ? `AI generation was unavailable (${reason}). Showing local passage prompts for now.`
-    : "AI generation was unavailable. Showing local passage prompts for now.";
-}

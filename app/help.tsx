@@ -55,7 +55,7 @@ const sections = [
   ],
   [
     "Free and Pro",
-    "Selah Free includes reading, Garden reflections, bookmarks, Scripture search, highlights, and reminders. Pro tools include Garden Insights, Connections, Word Study, cross-reference study, and AI-guided reflection. App Store billing is wired through the subscription page and requires the Selah Pro product to be active in App Store Connect.",
+    "Selah Free includes reading, Garden reflections, bookmarks, Scripture search, highlights, and reminders. Pro tools include Garden Insights, Connections, Word Study, cross-reference study, and guided reflection. App Store billing is wired through the subscription page and requires the Selah Pro product to be active in App Store Connect.",
   ],
 ] as const;
 

@@ -25,8 +25,7 @@ export default function KnowledgeGraph() {
   const s = useMemo(() => styles(c), [c]);
   const clusters = useMemo(() => buildKnowledgeGraph(notes), [notes]);
   const [synthesis, setSynthesis] = useState("");
-  const [mode, setMode] = useState<"ai" | "fallback" | "">("");
-  const [reason, setReason] = useState("");
+  const [mode, setMode] = useState<"algorithm" | "">("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const explainGraph = async () => {
@@ -38,7 +37,6 @@ export default function KnowledgeGraph() {
     setError("");
     setSynthesis("");
     setMode("");
-    setReason("");
     try {
       const { data, error: invokeError } = await supabase.functions.invoke(
         "garden-synthesis",
@@ -49,8 +47,7 @@ export default function KnowledgeGraph() {
         return;
       }
       setSynthesis(data?.synthesis || "No connection summary was returned.");
-      setMode(data?.mode || "fallback");
-      setReason(data?.reason || "");
+      setMode(data?.mode || "algorithm");
     } catch (caught) {
       setError(
         caught instanceof Error
@@ -78,19 +75,14 @@ export default function KnowledgeGraph() {
           <Text style={s.aiTitle}>Connection summary</Text>
           <Text style={s.aiSubtext}>
             Generate a concise explanation of the strongest connections in your
-            Garden graph.
+            Garden using Selah's built-in pattern engine.
           </Text>
           {!!error && <Text style={s.error}>{error}</Text>}
           {!!synthesis && (
             <View style={s.aiResult}>
               <Text style={s.aiLabel}>
-                {mode === "ai" ? "AI GRAPH SUMMARY" : "LOCAL GRAPH SUMMARY"}
+                {mode === "algorithm" ? "ALGORITHMIC CONNECTION SUMMARY" : "CONNECTION SUMMARY"}
               </Text>
-              {mode === "fallback" && (
-                <Text style={s.aiNotice}>
-                  AI unavailable{reason ? ` (${reason})` : ""}.
-                </Text>
-              )}
               <Text style={s.aiText}>{synthesis}</Text>
             </View>
           )}

@@ -24,7 +24,7 @@ features can use those relationships to surface connections across passages.
 ## Feature Ecosystem
 - Reading: Multi-Translation Engine, Themes, Font Scaling, Red Letter, Saved Highlights
 - Garden: Insight Entries, Garden Insights, Knowledge Graph
-- Pro: Word Study, Garden Synthesis, Scripture Search, Cross References, AI Reflection Guide
+- Pro: Word Study, Garden Synthesis, Scripture Search, Cross References, Guided Reflection
 - Settings: Face ID Login
 - Engagement: Study Reminders
 
@@ -51,7 +51,7 @@ switch appearances from Settings → Dark Mode.
 - Full Scripture search with local translation indexing
 - Cross-reference panel for the current reading page
 - Garden Insights synthesis from reflections, tags, thought groups, and books
-- AI-guided reflection screen tied to the current passage and prior Garden notes, with a deterministic fallback until OpenAI keys are configured
+- Algorithmic guided reflection screen tied to the current passage and prior Garden notes
 - Word Study across Scripture and Garden notes
 - Knowledge Graph clusters for tags, books, thought groups, and connected notes
 - Saved Scripture highlights with preferred highlight color, exact passage/page anchoring, long-press removal, and a highlights review page
@@ -61,7 +61,6 @@ switch appearances from Settings → Dark Mode.
 - Hosted Privacy Policy and Support URLs for App Store Connect review
 - App Store Connect subscription product activation for `selah_pro_monthly` and `selah_pro_yearly`
 - Email provider keys for account/subscription confirmation emails
-- Valid OpenAI API key configuration for live AI reflection generation
 - App Store Server Notification webhook handling for automatic renewals, cancellations, and refunds
 
 ## Compliance and billing status

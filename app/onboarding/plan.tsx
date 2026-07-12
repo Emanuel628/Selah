@@ -65,7 +65,7 @@ export default function Plan() {
             "Garden Insights synthesis from your reflections",
             "Knowledge Graph connections across notes",
             "Priority Scripture search and cross-reference study",
-            "AI-guided reflection tools when billing launches",
+            "Guided reflection and Garden synthesis tools",
           ].map((item) => (
             <View key={item} style={s.feature}>
               <Ionicons name="checkmark-circle" size={18} color={c.gold} />
@@ -73,8 +73,7 @@ export default function Plan() {
             </View>
           ))}
           <Text style={s.noCharge}>
-            No charge today. Stripe billing will only be added before paid
-            conversion launches.
+            No charge today. App Store billing controls future paid conversion.
           </Text>
           <Pressable
             disabled={busy}

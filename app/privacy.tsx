@@ -16,8 +16,8 @@ const sections = [
     "Your Garden notes, tags, thought groups, highlights, bookmarks, and reading position are personal study data. Selah uses them to show your saved reflections, generate Garden patterns, restore your reading state, and connect related passages or notes.",
   ],
   [
-    "AI features",
-    "When you use AI reflection or synthesis features, Selah sends the current passage, your question, and relevant Garden notes to the AI service provider only for the purpose of generating the requested guidance. Do not enter sensitive personal information that you do not want processed for that feature.",
+    "Guided reflection features",
+    "When you use guided reflection or synthesis features, Selah analyzes the current passage, your question, and relevant Garden notes with deterministic in-app and server-side algorithms. Selah does not send this content to OpenAI or another third-party AI model for these features.",
   ],
   [
     "Payments",

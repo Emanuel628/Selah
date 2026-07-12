@@ -26,9 +26,8 @@ export default function GardenInsights() {
   const c = useThemeColors();
   const s = useMemo(() => styles(c), [c]);
   const insights = useMemo(() => buildGardenInsights(notes), [notes]);
-  const [aiSynthesis, setAiSynthesis] = useState("");
-  const [aiMode, setAiMode] = useState<"ai" | "fallback" | "">("");
-  const [aiReason, setAiReason] = useState("");
+  const [synthesis, setSynthesis] = useState("");
+  const [synthesisMode, setSynthesisMode] = useState<"algorithm" | "">("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState("");
   const generateSynthesis = async () => {
@@ -38,9 +37,8 @@ export default function GardenInsights() {
     }
     setAiLoading(true);
     setAiError("");
-    setAiSynthesis("");
-    setAiMode("");
-    setAiReason("");
+    setSynthesis("");
+    setSynthesisMode("");
     try {
       const { data, error } = await supabase.functions.invoke(
         "garden-synthesis",
@@ -50,9 +48,8 @@ export default function GardenInsights() {
         setAiError(error.message);
         return;
       }
-      setAiSynthesis(data?.synthesis || "No synthesis was returned.");
-      setAiMode(data?.mode || "fallback");
-      setAiReason(data?.reason || "");
+      setSynthesis(data?.synthesis || "No synthesis was returned.");
+      setSynthesisMode(data?.mode || "algorithm");
     } catch (caught) {
       setAiError(
         caught instanceof Error ? caught.message : "Could not generate synthesis.",
@@ -70,8 +67,8 @@ export default function GardenInsights() {
             <View style={s.lockCopy}>
               <Text style={s.lockTitle}>Pro synthesis preview</Text>
               <Text style={s.lockText}>
-                These insights are generated from your local Garden. AI-guided
-                coaching will connect here when Pro billing and AI keys are live.
+                These insights are generated from your Garden with Selah's
+                built-in pattern engine.
               </Text>
             </View>
             <Pressable onPress={() => router.push("/subscription")} style={s.planButton}>
@@ -84,17 +81,12 @@ export default function GardenInsights() {
           <Text style={s.summary}>{insights.summary}</Text>
           <Text style={s.prompt}>{insights.prompt}</Text>
           {!!aiError && <Text style={s.error}>{aiError}</Text>}
-          {!!aiSynthesis && (
+          {!!synthesis && (
             <View style={s.aiBox}>
               <Text style={s.aiLabel}>
-                {aiMode === "ai" ? "AI SYNTHESIS" : "LOCAL SYNTHESIS"}
+                {synthesisMode === "algorithm" ? "ALGORITHMIC SYNTHESIS" : "GARDEN SYNTHESIS"}
               </Text>
-              {aiMode === "fallback" && (
-                <Text style={s.aiNotice}>
-                  AI unavailable{aiReason ? ` (${aiReason})` : ""}.
-                </Text>
-              )}
-              <Text style={s.aiText}>{aiSynthesis}</Text>
+              <Text style={s.aiText}>{synthesis}</Text>
             </View>
           )}
           <Pressable

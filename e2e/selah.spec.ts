@@ -23,7 +23,7 @@ test("Bible version can be selected from Settings and updates the Reader", async
   ).toBeVisible();
 });
 
-test("registration onboarding ends at reading, not a plan screen", async ({ page }) => {
+test("registration onboarding includes Bible version, guide, and plan choice", async ({ page }) => {
   await page.goto("/register");
   await expect(page.getByLabel("Back to sign in")).toBeVisible();
   await page.getByLabel("Full Name").fill("Test Reader");
@@ -39,7 +39,9 @@ test("registration onboarding ends at reading, not a plan screen", async ({ page
   await page.getByText("King James Version", { exact: true }).click();
   await page.getByText("Continue with KJAV").click();
   await expect(page.getByText("How Selah works")).toBeVisible();
-  await page.getByText("Begin reading").click();
+  await page.getByText("See account options").click();
+  await expect(page.getByText("Choose your Selah")).toBeVisible();
+  await page.getByText("Continue with Free").click();
   await expect(page.getByText("Genesis 1", { exact: true }).first()).toBeVisible();
 });
 

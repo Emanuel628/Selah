@@ -1,6 +1,6 @@
 # Selah Support
 
-For support, contact support@selahapp.com.
+For support, contact mejortech01@gmail.com.
 
 Include:
 
@@ -11,4 +11,4 @@ Include:
 
 Support topics include account access, password reset, subscriptions, restore
 purchases, privacy questions, Garden sync, highlights, bookmarks, reminders, and
-AI reflection features.
+guided reflection features.

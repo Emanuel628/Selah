@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { DetailScreen } from "@/components/DetailScreen";
-import { SUPPORT_EMAIL, SUPPORT_URL } from "@/lib/legal";
+import { SUPPORT_EMAIL } from "@/lib/legal";
 import { AppColors } from "@/lib/theme";
 import { useThemeColors } from "@/state/useThemeColors";
 
@@ -43,14 +43,6 @@ export default function Support() {
         >
           <Ionicons name="mail-outline" size={17} color={c.onAccent} />
           <Text style={s.buttonText}>Email Support</Text>
-        </Pressable>
-        <Pressable
-          accessibilityLabel="Open Selah support website"
-          onPress={() => Linking.openURL(SUPPORT_URL)}
-          style={s.secondary}
-        >
-          <Ionicons name="open-outline" size={17} color={c.green} />
-          <Text style={s.secondaryText}>Open Support URL</Text>
         </Pressable>
       </ScrollView>
     </DetailScreen>
@@ -98,17 +90,4 @@ const styles = (c: AppColors) =>
       marginTop: 18,
     },
     buttonText: { color: c.onAccent, fontWeight: "900" },
-    secondary: {
-      minHeight: 48,
-      borderRadius: 13,
-      borderWidth: 1,
-      borderColor: c.line,
-      backgroundColor: c.surface,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 8,
-      marginTop: 10,
-    },
-    secondaryText: { color: c.green, fontWeight: "900" },
   });

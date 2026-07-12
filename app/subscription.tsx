@@ -36,7 +36,7 @@ const features = [
   "Cross-reference study panel",
   "Saved highlights library",
   "Garden Insights synthesis",
-  "AI-guided reflection tied to your notes",
+  "Guided reflection tied to your notes",
   "Knowledge Graph connections",
 ];
 

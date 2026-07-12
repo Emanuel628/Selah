@@ -20,12 +20,12 @@ position are personal study data. Selah uses them to show saved reflections,
 generate Garden patterns, restore your reading state, and connect related
 passages or notes.
 
-## AI features
+## Guided reflection features
 
-When you use AI reflection or synthesis features, Selah sends the current
-passage, your question, and relevant Garden notes to the AI service provider
-only for the purpose of generating the requested guidance. Do not enter
-sensitive personal information that you do not want processed for that feature.
+When you use guided reflection or synthesis features, Selah analyzes the current
+passage, your question, and relevant Garden notes with deterministic in-app and
+server-side algorithms. Selah does not send this content to OpenAI or another
+third-party AI model for these features.
 
 ## Payments
 
@@ -57,4 +57,4 @@ account.
 
 ## Contact
 
-For privacy or support questions, contact support@selahapp.com.
+For privacy or support questions, contact mejortech01@gmail.com.

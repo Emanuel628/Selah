@@ -47,10 +47,10 @@ export default function Guide() {
           </View>
         ))}
         <Pressable
-          onPress={() => router.replace("/(tabs)")}
+          onPress={() => router.replace("/onboarding/plan")}
           style={s.button}
         >
-          <Text style={s.buttonText}>Begin reading</Text>
+          <Text style={s.buttonText}>See account options</Text>
         </Pressable>
       </ScrollView>
     </DetailScreen>
